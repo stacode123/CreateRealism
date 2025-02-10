@@ -1,27 +1,26 @@
 {
   "schemaVersion": 1,
-  "id": "examplemod",
+  "id": "realism",
   "version": "${version}",
-  "name": "Example Mod",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "name": "Create Realism",
+  "description": "A mod changing the Trains in create to be more realistic",
   "authors": [
-    "Me!"
+    "Stacode"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "sources": "https://github.com/stacode123/CreateRealism"
   },
-  "license": "Insert License Here",
-  "icon": "assets/examplemod/icon.png",
+  "license": "MIT",
+  "icon": "assets/realism/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.examplemod.fabric.ExampleModFabric"
+      "net.Realism.fabric.RealismFabric"
     ]
   },
   "mixins": [
-    "examplemod.mixins.json",
-    "examplemod-common.mixins.json"
+    "realismFabric.mixins.json",
+    "realismCommon.mixins.json"
   ],
   "depends": {
     "minecraft": "${minecraft_version}",

@@ -1,11 +1,12 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "net.examplemod.mixin.fabric",
+  "package": "net.Realism.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
   ],
   "mixins": [
+    "TrainMixin"
   ],
   "injectors": {
     "defaultRequire": 1

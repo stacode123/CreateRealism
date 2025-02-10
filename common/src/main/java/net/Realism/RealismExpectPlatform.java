@@ -1,8 +1,8 @@
-package net.examplemod;
+package net.Realism;
 
 import dev.architectury.injectables.annotations.ExpectPlatform;
 
-public class ExampleExpectPlatform {
+public class RealismExpectPlatform {
     /**
      * an example of {@link ExpectPlatform}.
      * <p>

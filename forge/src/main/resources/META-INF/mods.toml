@@ -1,33 +1,33 @@
 modLoader = "javafml"
 loaderVersion = "[${forge_version},)"
 #issueTrackerURL = ""
-license = "Insert License Here"
+license = "MIT"
 
 [[mods]]
-modId = "examplemod"
+modId = "realism"
 version = "${version}"
-displayName = "Example Mod"
-authors = "Me!"
+displayName = "Create Realism"
+authors = "Stacode"
 description = '''
-This is an example description! Tell everyone what your mod is about!
+A mod changing the Trains in create to be more realistic
 '''
 logoFile = "icon.png"
 
-[[dependencies.examplemod]]
+[[dependencies.realism]]
 modId = "forge"
 mandatory = true
 versionRange = "[${forge_version},)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.examplemod]]
+[[dependencies.realism]]
 modId = "minecraft"
 mandatory = true
 versionRange = "${minecraft_version}"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.examplemod]]
+[[dependencies.realism]]
 modId="create"
 mandatory=true
 versionRange="${create_version}"
