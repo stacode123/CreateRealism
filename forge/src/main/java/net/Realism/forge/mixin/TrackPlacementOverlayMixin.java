@@ -42,12 +42,12 @@ public class TrackPlacementOverlayMixin {
         if (radius > 90) {
             radius = 90;
         }
-        MutableComponent radiusText = Components.literal(Math.round(mxspeed * radius / 90) + "km/h" + " " + Math.round(mxspeed * radius / 90 / mxspeed) + "%");
+        MutableComponent radiusText = Components.literal(Math.round(mxspeed * radius / 90) + "km/h" + " " + Math.round(mxspeed * radius / 90 / mxspeed * 100) + "%");
         if (radius == 0) {
             if (handleLength > 45) {
                 handleLength = 45;
             }
-            radiusText = Components.literal(Math.round(mxspeed * handleLength / 45) + "km/h" + " " + Math.round(mxspeed * handleLength / 45 / mxspeed) + "%");
+            radiusText = Components.literal(Math.round(mxspeed * handleLength / 45) + "km/h" + " " + Math.round(mxspeed * handleLength / 45 / mxspeed * 100) + "%");
         }
         if (Straight) {
             radiusText = Components.literal(Math.round(mxspeed) + "km/h" + " " + "100%");
