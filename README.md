@@ -16,4 +16,7 @@ the max speed as seen in train schedules, In (%). I recommend using [Create Tram
 to temporarily set the max speed for curves and slopes
 ![img1.png](img1.png)
 
+# THIS DOES NOT CHANGE THE SPEED THE TRAINS RUN AT AND IS MEARLY A HELP FOR SETTING SPEED LIMITS
+Use [Create Tramways](https://modrinth.com/mod/tramways) to set speed limits
+
 More features coming soon!..
