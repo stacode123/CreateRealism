@@ -1,11 +1,9 @@
 {
   "required": true,
-  "minVersion": "0.8",
-  "package": "net.Realism.mixin.Forge",
+  "package": "net.Realism.forge.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": [
-  ],
   "mixins": [
+    "TrackPlacementOverlayMixin"
   ],
   "injectors": {
     "defaultRequire": 1
