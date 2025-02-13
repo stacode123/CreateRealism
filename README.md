@@ -14,6 +14,6 @@ The more locomotives(cars with conductors) you have, the less the acceleration w
 While building train tracks you can now see the max speed and grade of the track you are building. This also includes
 the max speed as seen in train schedules, In (%). I recommend using [Create Tramways](https://modrinth.com/mod/tramways)
 to temporarily set the max speed for curves and slopes
-![2025-02-13_19.40.26.png](forge/run/screenshots/2025-02-13_19.40.26.png)
+![img1.png](img1.png)
 
 More features coming soon!..
