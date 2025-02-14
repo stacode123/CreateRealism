@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = TrackPlacementOverlay.class, remap = false)
 public class TrackPlacementOverlayMixin {
 
-    @Inject(method = "render", at = @At("RETURN"), remap = false)
+    @Inject(method = "render", at = @At("TAIL"), remap = false)
     public void injectRender(ForgeGui gui, GuiGraphics graphics, float partialTicks, int width, int height, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         Window window = mc.getWindow();
@@ -50,7 +50,7 @@ public class TrackPlacementOverlayMixin {
             radiusText = Components.literal(Math.round(mxspeed * handleLength / 45) + "km/h" + " " + Math.round(mxspeed * handleLength / 45 / mxspeed * 100) + "%");
         }
         if (Straight) {
-            radiusText = Components.literal(Math.round(mxspeed) + "km/h" + " " + "100%");
+            return;
         }
         int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
         int radiusY = window.getGuiScaledHeight() - 40; // Adjusted position
