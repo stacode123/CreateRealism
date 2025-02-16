@@ -38,4 +38,14 @@ public abstract class BezierConnectionMixin implements TrackPlacementMixinStraig
         BlockPos Pos2 = tePositions.getSecond();
         return ((Math.abs(Pos1.getX() - Pos2.getX()) == 2 || Math.abs(Pos1.getZ() - Pos2.getZ()) == 2) || Math.abs(Pos1.getX() - Pos2.getX()) == Math.abs(Pos1.getZ() - Pos2.getZ())) && Pos1.getY() == Pos2.getY();
     }
+
+    @Override
+    public boolean isSlope() {
+        if (!resolved) {
+            resolve();
+        }
+        BlockPos Pos1 = tePositions.getFirst();
+        BlockPos Pos2 = tePositions.getSecond();
+        return (Pos1.getZ() == Pos2.getZ() || Pos1.getX() == Pos2.getX()) && Pos1.getY() != Pos2.getY();
+    }
 }

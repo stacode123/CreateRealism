@@ -42,4 +42,6 @@ public class TrackPlacementMixin implements ITrackPlacementInterface, PlacementI
     public BezierConnection getCurve() {
         return curve;
     }
+
+
 }

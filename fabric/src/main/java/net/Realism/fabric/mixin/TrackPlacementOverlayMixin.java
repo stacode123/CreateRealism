@@ -33,6 +33,7 @@ public class TrackPlacementOverlayMixin {
             return;
         }
         boolean Straight = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isStraight();
+        boolean Slope = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isSlope();
         float mxspeed = (AllConfigs.server().trains.poweredTrainTopSpeed).getF() * 3.6f;
         double radius = placementInfo.getCurve().getRadius();
         double handleLength = placementInfo.getCurve().getHandleLength();
@@ -51,6 +52,9 @@ public class TrackPlacementOverlayMixin {
         }
         if (Straight) {
             return;
+        }
+        if (Slope) {
+            radiusText = Components.literal(Math.round(mxspeed) + "km/h" + " 100%");
         }
         int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
         int radiusY = window.getGuiScaledHeight() - 40; // Adjusted position
