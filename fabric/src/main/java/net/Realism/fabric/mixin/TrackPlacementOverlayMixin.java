@@ -34,7 +34,9 @@ public class TrackPlacementOverlayMixin {
         }
         boolean Straight = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isStraight();
         boolean Slope = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isSlope();
-        float mxspeed = (AllConfigs.server().trains.poweredTrainTopSpeed).getF() * 3.6f;
+        float mxspeedP = (AllConfigs.server().trains.poweredTrainTopSpeed).getF() * 3.6f;
+        float mxspeedU = (AllConfigs.server().trains.trainTopSpeed).getF() * 3.6f;
+        float mxspeed = Math.max(mxspeedP, mxspeedU);
         double radius = placementInfo.getCurve().getRadius();
         double handleLength = placementInfo.getCurve().getHandleLength();
         if (mxspeed == 0) {
