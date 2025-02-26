@@ -12,6 +12,7 @@ import net.Realism.mixinaccesors.PlacementInfoAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.level.GameType;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -60,6 +61,10 @@ public class TrackPlacementOverlayMixin {
         }
         int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
         int radiusY = window.getGuiScaledHeight() - 40; // Adjusted position
+        if(mc.gameMode.getPlayerMode() == GameType.SURVIVAL) {
+            radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2+40;
+            radiusY = window.getGuiScaledHeight() - 50;
+        }
         graphics.drawString(gui.getFont(), radiusText, radiusX, radiusY, 0xFFFFFF, false);
 
         ITrackPlacementInterface mixin = (ITrackPlacementInterface) TrackPlacement.cached;
