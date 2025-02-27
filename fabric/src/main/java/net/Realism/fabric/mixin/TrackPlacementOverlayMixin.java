@@ -62,7 +62,7 @@ public class TrackPlacementOverlayMixin {
         int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
         int radiusY = window.getGuiScaledHeight() - 40;
         if(mc.gameMode.getPlayerMode() == GameType.SURVIVAL) {
-            radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2+40;
+            radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2+50;
             radiusY = window.getGuiScaledHeight() - 50;
         }
 
