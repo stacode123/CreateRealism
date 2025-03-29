@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import net.Realism.config.RealismConfig;
+import net.Realism.debug.RealismDebuger;
 
 import java.util.List;
 
@@ -14,6 +15,8 @@ import java.util.List;
 public abstract class TrainMixin {
     @Shadow
     public int fuelTicks;
+
+    @Shadow
     public List<Carriage> carriages;
 
     /**
@@ -37,10 +40,12 @@ public abstract class TrainMixin {
         float reduce = (float) ((carriages.size() * 0.0002f * RealismConfig.COMMON.CustomTrainAccelerationMultiplyer.get() ) / locomotives);
         ac -= reduce;
         if (ac < 0) ac = 0.0001f;
-        if(RealismConfig.CLIENT.debugMode.get()){
-            System.out.println("Train acceleration: " + ac + " | Carriages: " + carriages.size() + " | Locomotives: " + locomotives + " | Reduce: " + reduce);}
+
+        if(RealismConfig.CLIENT.debugMode.get()) {
+            // Send data to the debug logger instead of printing directly
+            RealismDebuger.getInstance().addDebugInfo(ac*400, carriages.size(), locomotives );
+        }
+
         return ac;
     }
-
-
 }
