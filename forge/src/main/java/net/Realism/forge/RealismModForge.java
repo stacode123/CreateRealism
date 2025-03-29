@@ -2,6 +2,7 @@ package net.Realism.forge;
 
 import net.Realism.RealismBlocks;
 import net.Realism.RealismMod;
+import net.Realism.forge.config.ForgeConfigRegistration;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -13,5 +14,6 @@ public class RealismModForge {
         IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         RealismBlocks.REGISTRATE.registerEventListeners(eventBus);
         RealismMod.init();
+        ForgeConfigRegistration.register();
     }
 }
