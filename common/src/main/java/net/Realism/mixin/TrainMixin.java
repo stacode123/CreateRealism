@@ -6,6 +6,7 @@ import com.simibubi.create.infrastructure.config.AllConfigs;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import net.Realism.config.RealismConfig;
 
 import java.util.List;
 
@@ -21,6 +22,10 @@ public abstract class TrainMixin {
      */
     @Overwrite()
     public float acceleration() {
+        if (!RealismConfig.COMMON.EnableCustomTrainAcceleration.get()) {
+            return (fuelTicks > 0 ? AllConfigs.server().trains.poweredTrainAcceleration.getF()
+                    : AllConfigs.server().trains.trainAcceleration.getF()) / 400;
+        }
         float ac = (fuelTicks > 0 ? AllConfigs.server().trains.poweredTrainAcceleration.getF() : AllConfigs.server().trains.trainAcceleration.getF()) / 400;
         int locomotives = 0;
         for (Carriage carriage : carriages) {
@@ -29,9 +34,11 @@ public abstract class TrainMixin {
             }
         }
         if (locomotives == 0) locomotives = 1;
-        float reduce = (carriages.size() * 0.0002f) / locomotives;
+        float reduce = (float) ((carriages.size() * 0.0002f * RealismConfig.COMMON.CustomTrainAccelerationMultiplyer.get() ) / locomotives);
         ac -= reduce;
         if (ac < 0) ac = 0.0001f;
+        if(RealismConfig.CLIENT.debugMode.get()){
+            System.out.println("Train acceleration: " + ac + " | Carriages: " + carriages.size() + " | Locomotives: " + locomotives + " | Reduce: " + reduce);}
         return ac;
     }
 

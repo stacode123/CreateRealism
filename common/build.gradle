@@ -23,6 +23,8 @@ repositories {
 
     maven { url = "https://api.modrinth.com/maven" } // LazyDFU
     maven { url = "https://maven.terraformersmc.com/releases" } // Mod Menu, EMI
+    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
+
 }
 
 dependencies {
@@ -35,4 +37,7 @@ dependencies {
     // All dependencies except Flywheel and Registrate are NOT safe to use!
     // Flywheel and Registrate must also be used carefully due to differences across loaders.
     modCompileOnly("com.simibubi.create:create-fabric-$minecraft_version:$create_fabric_version")
+
+    // ForgeConfigAPIPort dependency for configs
+    modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.2")
 }

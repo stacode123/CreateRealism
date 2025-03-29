@@ -4,6 +4,8 @@ import com.simibubi.create.Create;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.Realism.config.RealismConfig;
+
 
 public class RealismMod {
     public static final String MOD_ID = "realism";
@@ -13,7 +15,7 @@ public class RealismMod {
 
     public static void init() {
         LOGGER.info("{} initializing! Create version: {} on platform: {}", NAME, Create.VERSION, RealismExpectPlatform.platformName());
-        RealismBlocks.init(); // hold registrate in a separate class to avoid loading early on forge
+        RealismBlocks.init();
     }
 
     public static ResourceLocation id(String path) {
