@@ -35,6 +35,9 @@ public class RealismConfig {
         //public final ForgeConfigSpec.IntValue particleDensity;
         //public final ForgeConfigSpec.DoubleValue renderDistance;
         public final ForgeConfigSpec.BooleanValue debugMode;
+        public final ForgeConfigSpec.IntValue Xpos;
+        public final ForgeConfigSpec.IntValue Ypos;
+        public final ForgeConfigSpec.DoubleValue rotate;
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.push("visual");
@@ -45,6 +48,12 @@ public class RealismConfig {
             //        .defineInRange("renderDistance", 32.0, 8.0, 64.0);
             debugMode = builder.comment("Enable debug mode to see the modified acceleration")
                     .define("debugMode", false);
+            Xpos = builder.comment("X position of the debug overlay")
+                    .defineInRange("Xpos", 10, -1000, 1000);
+            Ypos = builder.comment("Y position of the debug overlay")
+                    .defineInRange("Ypos", 10, -1000, 1000);
+            rotate = builder.comment("Rotation of the debug overlay")
+                    .defineInRange("rotate", 0.0, -360.0, 360.0);
             builder.pop();
         }
     }

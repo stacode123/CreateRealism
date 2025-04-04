@@ -1,8 +1,10 @@
 package net.Realism.trains;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
+import com.simibubi.create.content.trains.graph.EdgePointType;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import com.simibubi.create.content.trains.signal.SignalBoundary;
 import com.simibubi.create.content.trains.signal.SignalBlock.SignalType;
@@ -12,6 +14,7 @@ import com.simibubi.create.content.trains.signal.TrackEdgePoint;
 
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Pair;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -77,20 +80,37 @@ public class SignalFinder {
 
         // For tracking cross signals
         MutableDouble crossSignalDistanceTracker = new MutableDouble(-1);
-        MutableObject<Pair<UUID, Boolean>> trackingCrossSignal = new MutableObject<>(null);
+        // Store the actual signal boundary and primary flag instead of just the ID
+        MutableObject<Pair<SignalBoundary, Boolean>> trackingCrossSignal = new MutableObject<>(null);
         Map<UUID, Pair<SignalBoundary, Boolean>> chainedGroups = new HashMap<>();
+
+        TravellingPoint.SteerDirection steerDirection = TravellingPoint.SteerDirection.NONE;
+        if (Minecraft.getInstance().player != null) {
+            // Check for A key (turn left)
+            if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_A)) {
+                steerDirection = TravellingPoint.SteerDirection.LEFT;
+            }
+            // Check for D key (turn right)
+            else if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_D)) {
+                steerDirection = TravellingPoint.SteerDirection.RIGHT;
+            }
+        }
 
         // Travel along the track
         scout.travel(train.graph, maxDistance,
-                scout.steer(TravellingPoint.SteerDirection.NONE,new Vec3(0,1,0)), // Always go straight
+                scout.steer(steerDirection,new Vec3(0,1,0)), // Always go straight
                 (distance, couple) -> {
                     // Process signal points
                     Couple<TrackNode> nodes = couple.getSecond();
-                    TrackEdgePoint boundary = couple.getFirst();
-
-                    // Skip non-signal points
-                    if (!(boundary instanceof SignalBoundary signal))
+                    TrackEdgePoint bond = couple.getFirst();
+                    if (!(bond instanceof SignalBoundary signal))
                         return false;
+                    SignalBoundary boundary = train.graph.getPoint(EdgePointType.SIGNAL,bond.id);
+                    // Skip non-signal points
+
+                    if(train.speed> 0.2 && distance < 5){
+                        return false;
+                    }
 
                     UUID entering = signal.getGroup(nodes.getSecond());
                     SignalEdgeGroup signalEdgeGroup = Create.RAILWAYS.signalEdgeGroups.get(entering);
@@ -106,7 +126,8 @@ public class SignalFinder {
 
                     if (!crossSignalTracked) {
                         if (crossSignal) {
-                            trackingCrossSignal.setValue(Pair.of(boundary.id, primary));
+                            // Store the signal boundary object itself along with primary flag
+                            trackingCrossSignal.setValue(Pair.of(signal, primary));
                             crossSignalDistanceTracker.setValue(distance);
                             chainedGroups.put(entering, Pair.of(signal, primary));
                         }
@@ -118,8 +139,9 @@ public class SignalFinder {
                     } else if (crossSignalTracked) {
                         chainedGroups.put(entering, Pair.of(signal, primary));
                         if (occupied) {
-                            Pair<UUID, Boolean> crossSignalPair = trackingCrossSignal.getValue();
-                            result.addSignal(signal, crossSignalDistanceTracker.doubleValue(),
+                            // Use the stored cross signal when adding to result
+                            Pair<SignalBoundary, Boolean> crossSignalPair = trackingCrossSignal.getValue();
+                            result.addSignal(crossSignalPair.getFirst(), crossSignalDistanceTracker.doubleValue(),
                                     crossSignalPair.getSecond(), occupied, true, entering);
                             if (!crossSignal)
                                 return true;

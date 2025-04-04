@@ -3,22 +3,27 @@ package net.Realism.mixin;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.infrastructure.config.AllConfigs;
+import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.trains.ETCS;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import net.Realism.config.RealismConfig;
 import net.Realism.debug.RealismDebuger;
+import org.spongepowered.asm.mixin.Unique;
 
 import java.util.List;
 
 @Mixin(value = Train.class, remap = false)
-public abstract class TrainMixin {
+public abstract class TrainMixin implements ITrainInterface {
     @Shadow
     public int fuelTicks;
 
     @Shadow
     public List<Carriage> carriages;
 
+    @Unique
+    public ETCS realism$etcs = null;
     /**
      * @author Stacode
      * @reason Change the acceleration to change depending on the amount of carriages and locomotives
@@ -47,5 +52,14 @@ public abstract class TrainMixin {
         }
 
         return ac;
+    }
+
+    @Unique
+    public void realism$setETCS(ETCS etcs) {
+        this.realism$etcs = etcs;
+    }
+    @Unique
+    public ETCS realism$getETCS() {
+        return this.realism$etcs;
     }
 }
