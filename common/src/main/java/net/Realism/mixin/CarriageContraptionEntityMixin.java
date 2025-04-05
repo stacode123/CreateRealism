@@ -21,8 +21,12 @@ public class CarriageContraptionEntityMixin {
     @Inject(method = "startControlling", at = @At("RETURN"), cancellable = true)
     private void afterStartControlling(BlockPos controlsLocalPos, Player player, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) {
-            if(carriage.train instanceof ITrainInterface RTrain) {
-            RTrain.realism$setETCS(new ETCS(carriage.train));}
+            if (carriage.train instanceof ITrainInterface RTrain) {
+                if (RTrain.realism$getETCS() == null) {
+                    RTrain.realism$setETCS(new ETCS(carriage.train));
+                }
+                RTrain.realism$getETCS().previousSignalScanResult = null;
+            }
         }
     }
 }

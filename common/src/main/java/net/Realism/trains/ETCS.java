@@ -3,12 +3,7 @@ package net.Realism.trains;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
-import com.simibubi.create.content.trains.entity.TravellingPoint;
-import com.simibubi.create.content.trains.graph.TrackGraph;
-import net.Realism.RealismMod;
-import net.Realism.config.RealismConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,8 +15,10 @@ import net.Realism.trains.SignalFinder.*;
 public class ETCS {
     boolean backward = false;
     public Train train;
+    public SignalScanResult previousSignalScanResult;
+    boolean previousBackward;
 
-    public ETCS(Train train) {;
+    public ETCS(Train train) {
         this.train = train;
     }
 
@@ -36,19 +33,26 @@ public class ETCS {
         //graphics.blit(new ResourceLocation("realism:textures/signal.png"), 250, -50, 0, 0, 32, 62, 32, 62);
         
         // Use the improved method that automatically detects direction
+        if (train.speed < 0) {
+            previousBackward = backward;
+            backward = true;
+        } else if (train.speed > 0) {
+            previousBackward = backward;
+            backward = false;
+        }
 
-        int xPos = (screenWidth * 4) - 516 - 10;  // 10 scaled pixels from right edge
-        int yPos = 10;
+        int xPos = (screenWidth * 4) - 536;  // 10 scaled pixels from right edge
+        int yPos = 0;
         RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcs.png"));
         graphics.blit(new ResourceLocation("realism:textures/etcs.png"),
                 xPos, yPos,   // screen position
                 0, 0,         // texture position (top left of texture)
-                516, 381,   // width and height to render
-                516, 381);  // texture width and height
+                536, 401,   // width and height to render
+                536, 401);  // texture width and height
         posestack.pushPose();
 
         // Move to the anchor point for rotation
-        posestack.translate( xPos+ 157,  yPos + 120, 0);
+        posestack.translate( xPos+ 167,  yPos + 130, 0);
 
         //-151.5
         //30
@@ -73,13 +77,14 @@ public class ETCS {
         // Render the image
         RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcshand.png"));
         graphics.blit(new ResourceLocation("realism:textures/etcshand.png"),
-                0, 0,   // screen position (now relative to transformed coordinates)
+                0,
+                0,   // screen position (now relative to transformed coordinates)
                 0, 0,   // texture position
                 49, 112,   // width and height to render
                 49, 112);  // texture width and height
         posestack.popPose();
 
-        renderETCSlimits(graphics, train,posestack,xPos, yPos);
+        renderETCSlimits(graphics, train,posestack,xPos+10, yPos+10);
 
 //        // Add movement direction information to display
 //        String direction = train.speed < 0 ? "Backward" : "Forward";
@@ -94,59 +99,123 @@ public class ETCS {
 //            yOffset += 15;
         posestack.popPose();
         }
-        public static void renderETCSlimits(GuiGraphics graphics, Train train, PoseStack posestack,int Xpos, int Ypos) {
-            SignalScanResult s = SignalFinder.scanAheadForSignals(train, 4000);
+        public void renderETCSlimits(GuiGraphics graphics, Train train, PoseStack posestack,int Xpos, int Ypos) {
+            SignalScanResult s = SignalFinder.scanAheadForSignals(train, 4000,backward);
+            if(s== null){
+                return;
+            }
+            if(previousSignalScanResult != null){
+
+            if((Math.abs(s.getDistanceToClosestOccupiedSignal()-previousSignalScanResult.getDistanceToClosestOccupiedSignal())>100) && backward==previousBackward){
+                s = previousSignalScanResult;
+            }}
+            previousSignalScanResult = s;
             posestack.pushPose();
             posestack.translate(Xpos + 361, Ypos + 227, 0);
             int CurrentX = 0;
             int CurrentY = 0;
+            double px = 0;
+
+            ResourceLocation startTex = new ResourceLocation("realism:textures/etcsplusstart.png");
+            ResourceLocation midTex = new ResourceLocation("realism:textures/etcsplusmid.png");
+            ResourceLocation endTex = new ResourceLocation("realism:textures/etcsplusend.png");
+            ResourceLocation flagTex = new ResourceLocation("realism:textures/flag.png");
+
             if (s.getDistanceToClosestOccupiedSignal() > 4000) {
-                RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusstart.png"));
                 CurrentY -= 9;
-                graphics.blit(new ResourceLocation("realism:textures/etcsplusstart.png"), 0, CurrentY, 0, 0, 15, 9, 15, 9);
-                RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusmid.png"));
-                for (int i = 0; i < 193; i += 1) {
+                renderElement(graphics, startTex, 0, CurrentY, 15, 9);
+
+                for (int i = 0; i < 198; i += 1) {
                     CurrentY -= 1;
-                    graphics.blit(new ResourceLocation("realism:textures/etcsplusmid.png"), 0, CurrentY, 0, 0, 15, 1, 15, 1);
+                    renderElement(graphics, midTex, 0, CurrentY, 15, 1);
                 }
-                RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusend.png"));
-                CurrentY -= 9;
-                graphics.blit(new ResourceLocation("realism:textures/etcsplusend.png"), 0, CurrentY, 0, 0, 15, 9, 15, 9);
+
                 posestack.popPose();
                 return;
             }
 
             if (s.getDistanceToClosestOccupiedSignal() < 60) {
-                RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusmid.png"));
                 double x = (s.getDistanceToClosestOccupiedSignal() * 0.304);
                 for (int i = 0; i < (int) x; i += 1) {
                     CurrentY -= 1;
-                    graphics.blit(new ResourceLocation("realism:textures/etcsplusmid.png"), 0, CurrentY, 0, 0, 15, 1, 15, 1);
+                    renderElement(graphics, midTex, 0, CurrentY, 15, 1);
                 }
+                renderElement(graphics, flagTex, 15, CurrentY, 15, 9);
                 posestack.popPose();
                 return;
+            }
 
-            }
-            RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusstart.png"));
             CurrentY -= 9;
-            graphics.blit(new ResourceLocation("realism:textures/etcsplusstart.png"), 0, CurrentY, 0, 0, 15, 9, 15, 9);
-            RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusmid.png"));
-            double x = (s.getDistanceToClosestOccupiedSignal() * 0.304) - 18;
-            if (x > 152.0) {
-                x = 152.0;
+            renderElement(graphics, startTex, 0, CurrentY, 15, 9);
+            if (s.getDistanceToClosestOccupiedSignal() <= 500){
+                px = (s.getDistanceToClosestOccupiedSignal() * 0.21) - 18;}
+            else {
+                px = (s.getDistanceToClosestOccupiedSignal() * 0.21) - 9;
             }
-            for (int i = 0; i < (int) x; i += 1) {
+            if (px > 96.0) {
+                px = 96.0;
+            }
+            for (int i = 0; i < (int) px; i += 1) {
                 CurrentY -= 1;
-                graphics.blit(new ResourceLocation("realism:textures/etcsplusmid.png"), 0, CurrentY, 0, 0, 15, 1, 15, 1);
+                renderElement(graphics, midTex, 0, CurrentY, 15, 1);
             }
             if (s.getDistanceToClosestOccupiedSignal() <= 500) {
-                RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcsplusend.png"));
                 CurrentY -= 9;
-                graphics.blit(new ResourceLocation("realism:textures/etcsplusend.png"), 0, CurrentY, 0, 0, 15, 9, 15, 9);
+                renderElement(graphics, endTex, 0, CurrentY, 15, 9);
+                renderElement(graphics, flagTex, 15, CurrentY, 15, 9);
+                posestack.popPose();
+                return;
             }
-
-
+            if (s.getDistanceToClosestOccupiedSignal() < 1000){
+            px = ((s.getDistanceToClosestOccupiedSignal()-500) * 0.068) ;}
+            else {px = ((s.getDistanceToClosestOccupiedSignal()-500) * 0.068);}
+             if (px > 34.0) {
+                px = 34.0;
+            }
+            for (int i = 0; i < (int) px; i += 1) {
+                CurrentY -= 1;
+                renderElement(graphics, midTex, 0, CurrentY, 15, 1);
+            }
+            if (s.getDistanceToClosestOccupiedSignal() <= 1000) {
+                CurrentY -= 9;
+                renderElement(graphics, endTex, 0, CurrentY, 15, 9);
+                renderElement(graphics, flagTex, 15, CurrentY, 15, 9);
+                posestack.popPose();
+                return;
+            }
+            if (s.getDistanceToClosestOccupiedSignal() <= 2000){
+                px = ((s.getDistanceToClosestOccupiedSignal()-1000) * 0.034);}
+            else {px = ((s.getDistanceToClosestOccupiedSignal()-1000) * 0.034);}
+            if (px > 34.0) {
+                px = 34.0;
+            }
+            for (int i = 0; i < (int) px; i += 1) {
+                CurrentY -= 1;
+                renderElement(graphics, midTex, 0, CurrentY, 15, 1);
+            }
+            if (s.getDistanceToClosestOccupiedSignal() <= 2000) {
+                CurrentY -= 9;
+                renderElement(graphics, endTex, 0, CurrentY, 15, 9);
+                renderElement(graphics, flagTex, 15, CurrentY, 15, 9);
+                posestack.popPose();
+                return;
+            }
+            px = ((s.getDistanceToClosestOccupiedSignal()-2000) * 0.017);
+            for (int i = 0; i < (int) px; i += 1) {
+                CurrentY -= 1;
+                renderElement(graphics, midTex, 0, CurrentY, 15, 1);
+            }
+            CurrentY -= 9;
+            renderElement(graphics, endTex, 0, CurrentY, 15, 9);
+            renderElement(graphics, flagTex, 15, CurrentY, 15, 9);
             posestack.popPose();
+
+        }
+
+        public static void renderElement(GuiGraphics graphics, ResourceLocation path, int x, int y, int width, int height) {
+            RenderSystem.setShaderTexture(0, path);
+            graphics.blit(path, x, y, 0, 0, width, height, width, height);
+
 
         }
     };
