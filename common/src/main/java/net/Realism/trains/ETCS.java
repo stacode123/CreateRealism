@@ -4,12 +4,19 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.simibubi.create.content.trains.entity.Train;
+import com.simibubi.create.foundation.utility.Iterate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.Realism.trains.SignalFinder.*;
-
+import net.minecraft.world.level.Level;
+import purplecreate.tramways.content.signs.TramSignBlock;
+import purplecreate.tramways.content.signs.TramSignBlockEntity;
+import purplecreate.tramways.content.signs.TramSignPoint;
+import purplecreate.tramways.content.signs.demands.SignDemand;
 
 
 public class ETCS {
@@ -23,6 +30,7 @@ public class ETCS {
     }
 
     public void render(GuiGraphics graphics) {
+
         PoseStack posestack = graphics.pose();
         posestack.pushPose();
         posestack.scale(0.25f, 0.25f, 0.25f);
@@ -100,7 +108,26 @@ public class ETCS {
         posestack.popPose();
         }
         public void renderETCSlimits(GuiGraphics graphics, Train train, PoseStack posestack,int Xpos, int Ypos) {
-            SignalScanResult s = SignalFinder.scanAheadForSignals(train, 4000,backward);
+        Level mc = Minecraft.getInstance().level;
+        SignalScanResult s = SignalFinder.scanAheadForSignals(train, 4000,backward);
+            if (s.getTramSigns() == null || s.getTramSigns().isEmpty()) {
+                for (TramSignInfo sign : s.getTramSigns()) {
+                    TramSignPoint signPoint = sign.getSign();
+                    for (boolean front : Iterate.trueAndFalse) {
+                        for (BlockPos pos : signPoint.sides.get(front)) {
+                            // Get the block entity at this position
+                            if (mc.getBlockEntity(pos) instanceof TramSignBlockEntity signEntity) {
+                                // Now you have the TramSignBlockEntity
+                                SignDemand demand = signEntity.getDemand();
+                                CompoundTag demandExtra = signEntity.getDemandExtra();
+
+                                // Use the demand information as needed
+                            }
+                        }
+                    }
+
+                }
+            }
             if(s== null){
                 return;
             }
