@@ -11,13 +11,13 @@ import com.simibubi.create.content.trains.signal.SignalBlock.SignalType;
 import com.simibubi.create.content.trains.signal.SignalEdgeGroup;
 import com.simibubi.create.content.trains.signal.TrackEdgePoint;
 
-
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Pair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
+import purplecreate.tramways.content.signs.TramSignPoint;
 
 import java.util.*;
 
@@ -53,12 +53,12 @@ public class SignalFinder {
         // Create a signal scout starting at appropriate point based on direction
         TravellingPoint scout = new TravellingPoint();
         TravellingPoint startPoint;
-        
+
         if (isMovingBackward) {
             // When moving backward, we need to scan from the "rear" of the train
             // which is actually the back of the last carriage
             startPoint = train.carriages.get(train.carriages.size() - 1).getTrailingPoint();
-            
+
             // Set up scout to look in the opposite direction the train is facing
             // No need to swap nodes - the trailing point is already oriented correctly
             // We just want to travel from this point in the direction of train movement
@@ -98,17 +98,25 @@ public class SignalFinder {
 
         // Travel along the track
         scout.travel(train.graph, maxDistance,
-                scout.steer(steerDirection,new Vec3(0,1,0)), // Always go straight
+                scout.steer(steerDirection, new Vec3(0, 1, 0)), // Always go straight
                 (distance, couple) -> {
                     // Process signal points
                     Couple<TrackNode> nodes = couple.getSecond();
                     TrackEdgePoint bond = couple.getFirst();
+
+                    // Handle TramSignPoint
+                    if (bond instanceof TramSignPoint tramSign) {
+                        result.addTramSign(tramSign, distance);
+                        return false; // Continue scanning, don't stop at tram signs
+                    }
+
+                    // Handle SignalBoundary
                     if (!(bond instanceof SignalBoundary signal))
                         return false;
-                    SignalBoundary boundary = train.graph.getPoint(EdgePointType.SIGNAL,bond.id);
+
                     // Skip non-signal points
 
-                    if(train.speed> 0.2 && distance < 5){
+                    if (train.speed > 0.2 && distance < 5) {
                         return false;
                     }
 
@@ -161,14 +169,29 @@ public class SignalFinder {
 
     public static class SignalScanResult {
         private List<SignalInfo> signals = new ArrayList<>();
+        private List<TramSignInfo> tramSigns = new ArrayList<>();
 
         public void addSignal(SignalBoundary signal, double distance, boolean primary,
                               boolean occupied, boolean isCrossSignal, UUID groupId) {
             signals.add(new SignalInfo(signal.id, groupId, distance, primary, occupied, isCrossSignal));
         }
 
+        public void addTramSign(TramSignPoint tramSign, double distance) {
+            tramSigns.add(new TramSignInfo(tramSign.id, distance, tramSign));
+        }
+
         public List<SignalInfo> getSignals() {
             return signals;
+        }
+
+        public List<TramSignInfo> getTramSigns() {
+            return tramSigns;
+        }
+
+        public TramSignInfo getClosestTramSign() {
+            return tramSigns.stream()
+                    .min(Comparator.comparing(TramSignInfo::getDistance))
+                    .orElse(null);
         }
 
         public SignalInfo getClosestOccupiedSignal() {
@@ -206,12 +229,52 @@ public class SignalFinder {
             this.isCrossSignal = isCrossSignal;
         }
 
-        public UUID getSignalId() { return signalId; }
-        public UUID getGroupId() { return groupId; }
-        public double getDistance() { return distance; }
-        public boolean isPrimary() { return primary; }
-        public boolean isOccupied() { return occupied; }
-        public boolean isCrossSignal() { return isCrossSignal; }
+        public UUID getSignalId() {
+            return signalId;
+        }
+
+        public UUID getGroupId() {
+            return groupId;
+        }
+
+        public double getDistance() {
+            return distance;
+        }
+
+        public boolean isPrimary() {
+            return primary;
+        }
+
+        public boolean isOccupied() {
+            return occupied;
+        }
+
+        public boolean isCrossSignal() {
+            return isCrossSignal;
+        }
+    }
+
+    public static class TramSignInfo {
+        private final UUID signId;
+        private final double distance;
+        private final TramSignPoint signType;
+
+        public TramSignInfo(UUID signId, double distance, TramSignPoint signType) {
+            this.signId = signId;
+            this.distance = distance;
+            this.signType = signType;
+        }
+
+        public UUID getSignId() {
+            return signId;
+        }
+
+        public double getDistance() {
+            return distance;
+        }
+
+        public TramSignPoint getSign() {
+            return signType;
+        }
     }
 }
-
