@@ -106,7 +106,10 @@ public class SignalFinder {
 
                     // Handle TramSignPoint
                     if (bond instanceof TramSignPoint tramSign) {
-                        result.addTramSign(tramSign, distance);
+                        // Determine if we're approaching from the primary side
+                        boolean primary = tramSign.isPrimary(nodes.getSecond());
+                        // Pass this information when adding the tram sign
+                        result.addTramSign(tramSign, distance, primary);
                         return false; // Continue scanning, don't stop at tram signs
                     }
 
@@ -176,8 +179,8 @@ public class SignalFinder {
             signals.add(new SignalInfo(signal.id, groupId, distance, primary, occupied, isCrossSignal));
         }
 
-        public void addTramSign(TramSignPoint tramSign, double distance) {
-            tramSigns.add(new TramSignInfo(tramSign.id, distance, tramSign));
+        public void addTramSign(TramSignPoint tramSign, double distance,boolean primary) {
+            tramSigns.add(new TramSignInfo(tramSign.id, distance, tramSign,primary));
         }
 
         public List<SignalInfo> getSignals() {
@@ -258,11 +261,13 @@ public class SignalFinder {
         private final UUID signId;
         private final double distance;
         private final TramSignPoint signType;
+        private final boolean primary;
 
-        public TramSignInfo(UUID signId, double distance, TramSignPoint signType) {
+        public TramSignInfo(UUID signId, double distance, TramSignPoint signType, boolean primary) {
             this.signId = signId;
             this.distance = distance;
             this.signType = signType;
+            this.primary = primary;
         }
 
         public UUID getSignId() {
@@ -275,6 +280,9 @@ public class SignalFinder {
 
         public TramSignPoint getSign() {
             return signType;
+        }
+        public boolean getPrimary() {
+            return primary;
         }
     }
 }

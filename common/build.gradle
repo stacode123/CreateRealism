@@ -41,7 +41,7 @@ dependencies {
 
     // ForgeConfigAPIPort dependency for configs
     modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.2")
-    modCompileOnly("purplecreate.tramways:tramways-common:0.2.1-mc1.20.1-common")
+    modCompileOnly("purplecreate.tramways:tramways-common:$tramways_version-common-1")
     // Add this for MixinExtras
     implementation "io.github.llamalad7:mixinextras-common:0.3.5"
     annotationProcessor "io.github.llamalad7:mixinextras-common:0.3.5"

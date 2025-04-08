@@ -9,7 +9,8 @@
     "BezierConnectionMixin",
     "TrackPlacementMixin",
     "TrainMixin",
-    "CarriageContraptionEntityMixin"
+    "CarriageContraptionEntityMixin",
+
   ],
   "injectors": {
     "defaultRequire": 1

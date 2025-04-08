@@ -2,8 +2,7 @@ package net.Realism.mixin;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
-import com.simibubi.create.content.trains.entity.Train;
-import net.Realism.trains.ETCS;
+import net.Realism.trains.etcs.ETCS;
 import net.Realism.Interfaces.ITrainInterface;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;

@@ -7,7 +7,7 @@ import com.simibubi.create.content.trains.track.TrackPlacementOverlay;
 import com.simibubi.create.foundation.utility.Components;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrackPlacementInterface;
-import net.Realism.Interfaces.TrackPlacementMixinStraight;
+import net.Realism.Interfaces.ITrackPlacementMixin;
 import net.Realism.mixinaccesors.PlacementInfoAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -33,8 +33,8 @@ public class TrackPlacementOverlayMixin {
         if (placementInfo.getCurve() == null) {
             return;
         }
-        boolean Straight = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isStraight();
-        boolean Slope = ((TrackPlacementMixinStraight) placementInfo.getCurve()).isSlope();
+        boolean Straight = ((ITrackPlacementMixin) placementInfo.getCurve()).isStraight();
+        boolean Slope = ((ITrackPlacementMixin) placementInfo.getCurve()).isSlope();
         float mxspeedP = (AllConfigs.server().trains.poweredTrainTopSpeed).getF() * 3.6f;
         float mxspeedU = (AllConfigs.server().trains.trainTopSpeed).getF() * 3.6f;
         float mxspeed = Math.max(mxspeedP, mxspeedU);

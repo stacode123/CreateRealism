@@ -2,13 +2,13 @@ package net.Realism.mixin;
 
 import com.simibubi.create.content.trains.track.BezierConnection;
 import com.simibubi.create.foundation.utility.Couple;
-import net.Realism.Interfaces.TrackPlacementMixinStraight;
+import net.Realism.Interfaces.ITrackPlacementMixin;
 import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(value = BezierConnection.class, remap = false)
-public abstract class BezierConnectionMixin implements TrackPlacementMixinStraight {
+public abstract class BezierConnectionMixin implements ITrackPlacementMixin {
     @Shadow
     public Couple<BlockPos> tePositions;
     @Shadow

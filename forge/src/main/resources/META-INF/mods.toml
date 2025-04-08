@@ -33,3 +33,9 @@ mandatory=true
 versionRange="${create_version}"
 ordering="NONE"
 side="BOTH"
+[[dependencies.realism]]
+modId="tramways"
+mandatory=true
+versionRange="[0.2.0,)"
+ordering="AFTER"
+side="BOTH"

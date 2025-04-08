@@ -1,12 +1,9 @@
 package net.Realism.forge.mixin;
 
 
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.content.trains.TrainHUD;
 import com.simibubi.create.content.trains.entity.Carriage;
 import net.Realism.Interfaces.ITrainInterface;
-import net.Realism.trains.ETCS;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import org.spongepowered.asm.mixin.Mixin;
