@@ -4,20 +4,18 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
-import com.simibubi.create.content.trains.graph.EdgePointType;
 import com.simibubi.create.content.trains.graph.TrackNode;
-import com.simibubi.create.content.trains.signal.SignalBoundary;
 import com.simibubi.create.content.trains.signal.SignalBlock.SignalType;
+import com.simibubi.create.content.trains.signal.SignalBoundary;
 import com.simibubi.create.content.trains.signal.SignalEdgeGroup;
 import com.simibubi.create.content.trains.signal.TrackEdgePoint;
-
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Pair;
+import net.Realism.compat.TramwaysCompat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
-import purplecreate.tramways.content.signs.TramSignPoint;
 
 import java.util.*;
 
@@ -104,12 +102,11 @@ public class SignalFinder {
                     Couple<TrackNode> nodes = couple.getSecond();
                     TrackEdgePoint bond = couple.getFirst();
 
-                    // Handle TramSignPoint
-                    if (bond instanceof TramSignPoint tramSign) {
-                        // Determine if we're approaching from the primary side
-                        boolean primary = tramSign.isPrimary(nodes.getSecond());
+                    if (TramwaysCompat.isTramSignPoint(bond)) {
+                        // Determine if we're approaching from the primary side using compat method
+                        boolean primary = TramwaysCompat.isPrimary(bond, nodes.getSecond());
                         // Pass this information when adding the tram sign
-                        result.addTramSign(tramSign, distance, primary);
+                        result.addTramSign(bond, distance, primary);
                         return false; // Continue scanning, don't stop at tram signs
                     }
 
@@ -179,8 +176,24 @@ public class SignalFinder {
             signals.add(new SignalInfo(signal.id, groupId, distance, primary, occupied, isCrossSignal));
         }
 
-        public void addTramSign(TramSignPoint tramSign, double distance,boolean primary) {
-            tramSigns.add(new TramSignInfo(tramSign.id, distance, tramSign,primary));
+        public void addTramSign(Object tramSign, double distance, boolean primary) {
+            if (!TramwaysCompat.isLoaded()) return;
+
+            Object tramSignInfo = TramwaysCompat.createTramSignInfo(
+                    (UUID)getFieldValue(tramSign, "id"), distance, tramSign, primary);
+            if (tramSignInfo != null) {
+                tramSigns.add((TramSignInfo)tramSignInfo);
+            }
+        }
+
+        private Object getFieldValue(Object obj, String fieldName) {
+            try {
+                java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+                field.setAccessible(true);
+                return field.get(obj);
+            } catch (Exception e) {
+                return null;
+            }
         }
 
         public List<SignalInfo> getSignals() {
@@ -260,14 +273,18 @@ public class SignalFinder {
     public static class TramSignInfo {
         private final UUID signId;
         private final double distance;
-        private final TramSignPoint signType;
+        private final Object signType; // Changed from TramSignPoint
         private final boolean primary;
 
-        public TramSignInfo(UUID signId, double distance, TramSignPoint signType, boolean primary) {
+        public TramSignInfo(UUID signId, double distance, Object signType, boolean primary) {
             this.signId = signId;
             this.distance = distance;
             this.signType = signType;
             this.primary = primary;
+        }
+
+        public Object getSign() { // Changed return type
+            return signType;
         }
 
         public UUID getSignId() {
@@ -278,9 +295,6 @@ public class SignalFinder {
             return distance;
         }
 
-        public TramSignPoint getSign() {
-            return signType;
-        }
         public boolean getPrimary() {
             return primary;
         }

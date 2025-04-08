@@ -35,7 +35,7 @@ ordering="NONE"
 side="BOTH"
 [[dependencies.realism]]
 modId="tramways"
-mandatory=true
-versionRange="[0.2.0,)"
+mandatory=false
+versionRange="[0.2.1,)"
 ordering="AFTER"
 side="BOTH"

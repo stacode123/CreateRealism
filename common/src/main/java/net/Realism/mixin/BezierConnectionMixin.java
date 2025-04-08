@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(value = BezierConnection.class, remap = false)
+@Mixin(value = BezierConnection.class)
 public abstract class BezierConnectionMixin implements ITrackPlacementMixin {
     @Shadow
     public Couple<BlockPos> tePositions;

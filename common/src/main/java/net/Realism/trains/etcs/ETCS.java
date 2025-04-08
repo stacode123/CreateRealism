@@ -6,10 +6,11 @@ import com.mojang.math.Axis;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.foundation.utility.Couple;
 import net.Realism.Interfaces.ITramSignPoint;
+import net.Realism.RNetworking;
 import net.Realism.RealismMod;
+import net.Realism.compat.TramwaysCompat;
 import net.Realism.mixinaccesors.TramSignDataAccessor;
 import net.Realism.network.ETCSSyncPacket;
-import net.Realism.network.RealismPackets;
 import net.Realism.trains.SignalFinder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -26,6 +27,7 @@ import purplecreate.tramways.content.signs.demands.TemporarySpeedSignDemand;
 
 import java.util.*;
 
+import static net.Realism.compat.isModLoaded.isTramwaysLoaded;
 import static net.Realism.trains.etcs.ETCStools.optimizedRenderSpeedCurve;
 import static net.Realism.trains.etcs.ETCStools.renderElement;
 
@@ -99,7 +101,12 @@ public class ETCS {
             this.distanceToSignal = s.getDistanceToClosestOccupiedSignal();
 
             // Process tram signs for speed limits
-            processTramSigns(s);
+            if (isTramwaysLoaded()) {
+                cachedSpeedLimits = TramwaysCompat.processTramSigns(s,train.maxSpeed()*20*3.6f);
+            } else {
+                // Reset speed limits when Tramways isn't loaded
+                cachedSpeedLimits = new ArrayList<>();
+            }
 
             float distance = (float) s.getDistanceToClosestOccupiedSignal();
             float maxDeceleration = train.acceleration() * 2f * 400;
@@ -593,7 +600,7 @@ public class ETCS {
         );
 
         // Send to all players
-        RealismPackets.sendToAllClients(packet, server);
+        RNetworking.sendToAll(packet);
     }
 
     public void updateFromNetwork(double distanceToSignal, double speedLimit, float needleRotation, boolean backward,

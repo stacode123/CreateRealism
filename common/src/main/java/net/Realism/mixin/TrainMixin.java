@@ -1,6 +1,5 @@
 package net.Realism.mixin;
 
-import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.graph.DimensionPalette;
@@ -24,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Mixin(value = Train.class, remap = false)
+@Mixin(value = Train.class,remap = false)
 public abstract class TrainMixin implements ITrainInterface {
 
     @Shadow
@@ -61,18 +60,15 @@ public abstract class TrainMixin implements ITrainInterface {
         }
 
     }
-    @ModifyReturnValue(method = "read(Lnet/minecraft/nbt/CompoundTag;Ljava/util/Map;Lcom/simibubi/create/content/trains/graph/DimensionPalette;)Lcom/simibubi/create/content/trains/entity/Train;", at = @At("RETURN"))
-    private static Train onTrainRead(Train original, CompoundTag tag, Map<UUID, TrackGraph> trackNetworks, DimensionPalette dimensions) {
-        // The original Train object is now created and returned
-
-        // Check if our custom data exists in the tag
+    @Inject(method = "read", at = @At("RETURN"), cancellable = true)
+    private static void onTrainRead(CompoundTag tag, Map<UUID, TrackGraph> trackNetworks,
+                                    DimensionPalette dimensions, CallbackInfoReturnable<Train> cir) {
+        Train original = cir.getReturnValue();
         if (tag.contains("ETCS")) {
             CompoundTag customDataTag = tag.getCompound("ETCS");
             ((ITrainInterface)original).realism$setETCS(new ETCS(original));
             ((ITrainInterface)original).realism$getETCS().loadFromNBT(customDataTag);
         }
-
-        return original;
     }
 
     /**
