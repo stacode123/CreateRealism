@@ -4,6 +4,7 @@ package net.Realism.forge.mixin;
 import com.simibubi.create.content.trains.TrainHUD;
 import com.simibubi.create.content.trains.entity.Carriage;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.config.RealismConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import org.spongepowered.asm.mixin.Mixin;
@@ -31,7 +32,7 @@ public abstract class TrainHudMixin {
     )
     private static void afterPoseStackTranslate(ForgeGui gui, GuiGraphics graphics, float partialTicks,
                                                 int width, int height, CallbackInfo ci) {
-        if(getCarriage().train instanceof ITrainInterface RTrain) {
+        if(getCarriage().train instanceof ITrainInterface RTrain&& RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get()) {
             RTrain.realism$getETCS().render(graphics);}
     }
 

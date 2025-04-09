@@ -1,16 +1,16 @@
 package net.Realism.trains.etcs;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import com.simibubi.create.content.trains.entity.Train;
-import com.simibubi.create.foundation.utility.Couple;
-import net.Realism.Interfaces.ITramSignPoint;
 import net.Realism.RNetworking;
-import net.Realism.RealismMod;
 import net.Realism.compat.TramwaysCompat;
-import net.Realism.mixinaccesors.TramSignDataAccessor;
+import net.Realism.config.RealismConfig;
 import net.Realism.network.ETCSSyncPacket;
+import net.Realism.network.SteerDirectionPacket;
 import net.Realism.trains.SignalFinder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -20,14 +20,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.Realism.trains.SignalFinder.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
-import purplecreate.tramways.content.signs.TramSignPoint;
-import purplecreate.tramways.content.signs.demands.SignDemand;
-import purplecreate.tramways.content.signs.demands.TemporaryEndSignDemand;
-import purplecreate.tramways.content.signs.demands.TemporarySpeedSignDemand;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 import static net.Realism.compat.isModLoaded.isTramwaysLoaded;
+import static net.Realism.network.SteerDirectionPacket.KeyPressType.*;
 import static net.Realism.trains.etcs.ETCStools.optimizedRenderSpeedCurve;
 import static net.Realism.trains.etcs.ETCStools.renderElement;
 
@@ -37,9 +35,7 @@ public class ETCS {
     public Train train;
     public SignalScanResult previousSignalScanResult;
     boolean previousBackward;
-    
-    // New variables to store calculation results
-    private SignalScanResult currentSignalScanResult;
+
     private double speedLimit = -1; // -1 means no limit
     private double distanceToSignal = 0;
     private float needleRotationDegrees = 0;
@@ -52,6 +48,8 @@ public class ETCS {
     private static final int SYNC_INTERVAL_MS = 200; // Sync every 200ms
 
     private int curvedropping;
+    private int diffrenceCounter=0;
+    private int zoom = 1;
 
     // Braking distances
     private double cachedEmergencyBrakingDist;
@@ -60,8 +58,12 @@ public class ETCS {
     private boolean cachedCurveIsDropping = false;
     private double cachedAllowedSpeed = -1;
     private List<SpeedLimit> cachedSpeedLimits = new ArrayList<>();
-    private Font font = Minecraft.getInstance().font;
+    private final Font font = Minecraft.getInstance().font;
 
+    private boolean plusKeyWasDown = false;
+    private boolean minusKeyWasDown = false;
+    private long lastKeyPressTime = 0;
+    private static final long KEY_COOLDOWN_MS = 300;
     
     private int trackspeedlimit = 300;
     public ETCS(Train train) {
@@ -84,20 +86,28 @@ public class ETCS {
             previousBackward = backward;
             backward = false;
         }
-        
-        // Scan for signals
-        SignalScanResult s = SignalFinder.scanAheadForSignals(train, 4000, backward);
+        ReciveKeys();
+
+
+
+        SignalScanResult s = SignalFinder.scanAheadForSignals(train, (double) 4000 /zoom, backward);
         
         if (s != null) {
             // Logic to decide whether to use previous scan result
             if (previousSignalScanResult != null) {
-                if ((Math.abs(s.getDistanceToClosestOccupiedSignal() - previousSignalScanResult.getDistanceToClosestOccupiedSignal()) > 100)
-                        && backward == previousBackward) {
+                if (diffrenceCounter<10){
+                if (((Math.abs(s.getDistanceToClosestOccupiedSignal() - previousSignalScanResult.getDistanceToClosestOccupiedSignal()) > 100)
+                        && backward == previousBackward)) {
+                    diffrenceCounter+=1;
                     s = previousSignalScanResult;
+                }}
+                else {
+                    diffrenceCounter = 0;
                 }
             }
             this.previousSignalScanResult = s;
-            this.currentSignalScanResult = s;
+            // New variables to store calculation results
+            SignalScanResult currentSignalScanResult = s;
             this.distanceToSignal = s.getDistanceToClosestOccupiedSignal();
 
             // Process tram signs for speed limits
@@ -138,73 +148,6 @@ public class ETCS {
         // Send data to clients if needed
         syncToClients();
     }
-    /**
-     * Process tram signs to extract speed limits
-     */
-    private void processTramSigns(SignalScanResult s) {
-        try {
-            cachedSpeedLimits = new ArrayList<>();
-            for (TramSignInfo sign : s.getTramSigns()) {
-                if (sign == null || sign.getSign() == null) continue;
-                Couple<Set<TramSignPoint.SignData>> sides = null;
-                if (sign.getSign() instanceof ITramSignPoint) {
-                    sides = ((ITramSignPoint)sign.getSign()).getSides();
-                } else {
-                    // Use reflection as a fallback
-                    try {
-                        java.lang.reflect.Field sidesField = TramSignPoint.class.getDeclaredField("sides");
-                        sidesField.setAccessible(true);
-                        sides = (Couple<Set<TramSignPoint.SignData>>) sidesField.get(sign.getSign());
-                    } catch (Exception e) {
-                        RealismMod.LOGGER.error("Error accessing sides field: " + e.getMessage());
-                    }
-                }
-
-                if (sides == null) continue;
-                CompoundTag tag = null;
-                SignDemand demand = null;
-                int LastLimit = 300;
-                if (sides.get(sign.getPrimary()) == null) continue;
-                    for (TramSignPoint.SignData signD : new HashSet<>(sides.get(sign.getPrimary()))) {
-                        if (signD == null) continue;
-                        if (!(signD instanceof TramSignDataAccessor)) {
-                            try {
-                                java.lang.reflect.Field demandFieldExtra = TramSignPoint.SignData.class.getDeclaredField("demandExtra");
-                                java.lang.reflect.Field demandField = TramSignPoint.SignData.class.getDeclaredField("demand");
-                                demandFieldExtra.setAccessible(true);
-                                demandField.setAccessible(true);
-                                tag = (CompoundTag) demandFieldExtra.get(signD);
-                                demand = (SignDemand) demandField.get(signD);
-
-                            } catch (Exception e) {
-                                RealismMod.LOGGER.error("Error accessing DemandExtra field: " + e.getMessage());
-                            }
-                        } else {
-
-
-                            TramSignDataAccessor accessor = (TramSignDataAccessor) signD;
-
-                            demand = accessor.getDemand();
-                            if (demand == null) continue;
-
-                            tag = accessor.getDemandExtra();
-                        }
-                        if (tag != null && tag.contains("Throttle")) {
-                            double signSpeedLimit = tag.getInt("Throttle");
-                            signSpeedLimit *= train.maxSpeed() / 100 * 20 * 3.6f;
-                            cachedSpeedLimits.add(new SpeedLimit(sign.getDistance(), signSpeedLimit));
-                            if (demand instanceof TemporarySpeedSignDemand) {
-                                LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-1).speedLimit;
-                            }}
-                        if (demand instanceof TemporaryEndSignDemand) {
-                            cachedSpeedLimits.add(new SpeedLimit(sign.getDistance(), LastLimit));}
-
-                    }
-            }
-        } catch (Exception e) {
-            RealismMod.LOGGER.error("Error processing tram signs: " + e.getMessage(), e);
-        }
-    }
 
 
     /**
@@ -213,20 +156,22 @@ public class ETCS {
      */
     public void render(GuiGraphics graphics) {
         // Load the most current data before rendering
-        Minecraft mc = Minecraft.getInstance();
         PoseStack posestack = graphics.pose();
+        double ScaleFactor = RealismConfig.CLIENT.ETCSSize.get();
         posestack.pushPose();
-        posestack.scale(0.25f, 0.25f, 0.25f);
+        posestack.scale((float) (0.25f*ScaleFactor), (float) (0.25f*ScaleFactor), (float) (0.25f*ScaleFactor));
+        sendKeysToServer();
         
         int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        int screenHeight = Minecraft.getInstance().getWindow().getHeight();
-        
-        int xPos = (screenWidth * 4) - 536;  // 10 scaled pixels from right edge
+        Minecraft.getInstance().getWindow();
+        // When player presses the "increase" key
+        int xPos = (int) ((screenWidth * 4/ScaleFactor) - 536);  // 10 scaled pixels from right edge
         int yPos = 0;
         
         // Render the ETCS panel background
-        RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcs.png"));
-        graphics.blit(new ResourceLocation("realism:textures/etcs.png"),
+        String zoomTexture = String.format("realism:textures/etcszoom%d.png", zoom);
+        RenderSystem.setShaderTexture(0, new ResourceLocation(zoomTexture));
+        graphics.blit(new ResourceLocation(zoomTexture),
                 xPos, yPos,   // screen position
                 0, 0,         // texture position (top left of texture)
                 536, 401,   // width and height to render
@@ -243,41 +188,44 @@ public class ETCS {
         // Render the image
         RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcshand.png"));
         graphics.blit(new ResourceLocation("realism:textures/etcshand.png"),
-                0,
-                0,   // screen position (now relative to transformed coordinates)
-                0, 0,   // texture position
+                0, 0,   // screen position
+                0, 0,         // texture position (top left of texture)
                 49, 112,   // width and height to render
-                49, 112);  // texture width and height
+                49, 112);
         posestack.popPose();
 
         //graphics.drawString(mc.font,String.valueOf((int)train.speed*20*3.6),xPos + 156,yPos+124,0x294A6DFF);
 
         // Render ETCS limits display
         renderETCSlimits(graphics, posestack, xPos + 10, yPos + 10);
-        renderOverviewItems(graphics,xPos, yPos,(int)distanceToSignal,1);
+        renderOverviewItems(graphics,xPos, yPos, zoom);
         renderBrakingCurve(graphics, posestack, xPos+10, yPos+10);
         
         posestack.popPose();
     }
-    
+
     public void renderETCSlimits(GuiGraphics graphics, PoseStack posestack, int Xpos, int Ypos) {
-        
         posestack.pushPose();
         posestack.translate(Xpos + 361, Ypos + 227, 0);
-        int CurrentX = 0;
         int CurrentY = 0;
-        double px = 0;
 
         ResourceLocation startTex = new ResourceLocation("realism:textures/etcsplusstart.png");
         ResourceLocation midTex = new ResourceLocation("realism:textures/etcsplusmid.png");
         ResourceLocation endTex = new ResourceLocation("realism:textures/etcsplusend.png");
         ResourceLocation flagTex = new ResourceLocation("realism:textures/flag.png");
 
-        if (distanceToSignal > 4000) {
+        // Scale boundaries based on zoom
+        double scaledMax = 4000.0 / zoom;
+        double scaledBoundary1 = 500.0 / zoom;
+        double scaledBoundary2 = 1000.0 / zoom;
+        double scaledBoundary3 = 2000.0 / zoom;
+
+        // Handle case where distance is beyond max range
+        if (distanceToSignal > scaledMax) {
             CurrentY -= 9;
             renderElement(graphics, startTex, 0, CurrentY, 15, 9);
 
-            for (int i = 0; i < 198; i += 1) {
+            for (int i = 0; i < 198; i++) {
                 CurrentY -= 1;
                 renderElement(graphics, midTex, 0, CurrentY, 15, 1);
             }
@@ -286,9 +234,10 @@ public class ETCS {
             return;
         }
 
+        // Handle very short distances
         if (distanceToSignal < 60) {
-            double x = (distanceToSignal * 0.304);
-            for (int i = 0; i < (int) x; i += 1) {
+            double pixelLength = distanceToSignal * 0.304 * zoom;
+            for (int i = 0; i < (int)pixelLength; i++) {
                 CurrentY -= 1;
                 renderElement(graphics, midTex, 0, CurrentY, 15, 1);
             }
@@ -297,66 +246,85 @@ public class ETCS {
             return;
         }
 
+        // Start rendering the normal case
         CurrentY -= 9;
         renderElement(graphics, startTex, 0, CurrentY, 15, 9);
-        if (distanceToSignal <= 500){
-            px = (distanceToSignal * 0.21) - 18;}
-        else {
-            px = (distanceToSignal * 0.21) - 9;
+
+        // Calculate pixel length for first segment
+        double pixelLength;
+        if (distanceToSignal <= scaledBoundary1) {
+            pixelLength = distanceToSignal * 0.21 * zoom - 18;
+        } else {
+            pixelLength = Math.min(96.0, distanceToSignal * 0.21 * zoom - 9);
         }
-        if (px > 96.0) {
-            px = 96.0;
-        }
-        for (int i = 0; i < (int) px; i += 1) {
+
+        // Render first segment
+        for (int i = 0; i < (int)pixelLength; i++) {
             CurrentY -= 1;
             renderElement(graphics, midTex, 0, CurrentY, 15, 1);
         }
-        if (distanceToSignal <= 500) {
+
+        // Exit if within first boundary
+        if (distanceToSignal <= scaledBoundary1) {
             CurrentY -= 9;
             renderElement(graphics, endTex, 0, CurrentY, 15, 9);
             renderElement(graphics, flagTex, 15, CurrentY, 19, 11);
             posestack.popPose();
             return;
         }
-        if (distanceToSignal < 1000){
-        px = ((distanceToSignal-500) * 0.068) ;}
-        else {px = ((distanceToSignal-500) * 0.068);}
-         if (px > 34.0) {
-            px = 34.0;
+
+        // Calculate pixel length for second segment
+        if (distanceToSignal < scaledBoundary2) {
+            pixelLength = (distanceToSignal - scaledBoundary1) * 0.068 * zoom;
+        } else {
+            pixelLength = Math.min(34.0, (distanceToSignal - scaledBoundary1) * 0.068 * zoom);
         }
-        for (int i = 0; i < (int) px; i += 1) {
+
+        // Render second segment
+        for (int i = 0; i < (int)pixelLength; i++) {
             CurrentY -= 1;
             renderElement(graphics, midTex, 0, CurrentY, 15, 1);
         }
-        if (distanceToSignal <= 1000) {
+
+        // Exit if within second boundary
+        if (distanceToSignal <= scaledBoundary2) {
             CurrentY -= 9;
             renderElement(graphics, endTex, 0, CurrentY, 15, 9);
             renderElement(graphics, flagTex, 15, CurrentY, 19, 11);
             posestack.popPose();
             return;
         }
-        if (distanceToSignal <= 2000){
-            px = ((distanceToSignal-1000) * 0.034);}
-        else {px = ((distanceToSignal-1000) * 0.034);}
-        if (px > 34.0) {
-            px = 34.0;
+
+        // Calculate pixel length for third segment
+        if (distanceToSignal <= scaledBoundary3) {
+            pixelLength = (distanceToSignal - scaledBoundary2) * 0.034 * zoom;
+        } else {
+            pixelLength = Math.min(34.0, (distanceToSignal - scaledBoundary2) * 0.034 * zoom);
         }
-        for (int i = 0; i < (int) px; i += 1) {
+
+        // Render third segment
+        for (int i = 0; i < (int)pixelLength; i++) {
             CurrentY -= 1;
             renderElement(graphics, midTex, 0, CurrentY, 15, 1);
         }
-        if (distanceToSignal <= 2000) {
+
+        // Exit if within third boundary
+        if (distanceToSignal <= scaledBoundary3) {
             CurrentY -= 9;
             renderElement(graphics, endTex, 0, CurrentY, 15, 9);
             renderElement(graphics, flagTex, 15, CurrentY, 19, 11);
             posestack.popPose();
             return;
         }
-        px = ((distanceToSignal-2000) * 0.017);
-        for (int i = 0; i < (int) px; i += 1) {
+
+        // Calculate and render fourth segment (beyond 2000)
+        pixelLength = (distanceToSignal - scaledBoundary3) * 0.017 * zoom;
+        for (int i = 0; i < (int)pixelLength; i++) {
             CurrentY -= 1;
             renderElement(graphics, midTex, 0, CurrentY, 15, 1);
         }
+
+        // End rendering
         CurrentY -= 9;
         renderElement(graphics, endTex, 0, CurrentY, 15, 9);
         renderElement(graphics, flagTex, 15, CurrentY, 19, 11);
@@ -393,7 +361,7 @@ public class ETCS {
         optimizedRenderSpeedCurve(graphics, poseStack, xPos + 155, yPos + 119, allowedSpeed, curveColor);
     }
 
-    public void renderOverviewItems(GuiGraphics graphics,int xPos, int yPos,int distance,int zoom) {
+    public void renderOverviewItems(GuiGraphics graphics, int xPos, int yPos, int zoom) {
         ResourceLocation flag = new ResourceLocation("realism:textures/flag.png");
             for (SpeedLimit s : cachedSpeedLimits){
                 if (s.getDistance() > distanceToSignal){continue;}
@@ -413,50 +381,48 @@ public class ETCS {
     }
 
 
-    public int calculateDistancePixelPosition(double distance,int zoom) {
-        if (zoom == 1) {
-            int pixelPos = 0;
+    public int calculateDistancePixelPosition(double distance, int zoom) {
+        int pixelPos = 0;
 
-            if (distance > 4000) {
-                return 198; // Maximum offset without the additional 9px
-            }
+        // Scale distance boundaries by zoom factor
+        double scaledMax = 4000.0 / zoom;
+        double scaledBoundary1 = 500.0 / zoom;
+        double scaledBoundary2 = 1000.0 / zoom;
+        double scaledBoundary3 = 2000.0 / zoom;
 
-            // First range: 0-500 units
-            double range1 = Math.min(500, distance);
-            if (distance <= 500) {
-                pixelPos += (int) ((range1 * 0.21));
-                return pixelPos;
-            }
+        if (distance > scaledMax) {
+            return 198; // Maximum offset
+        }
 
-            pixelPos += (int) ((range1 * 0.21));
+        // First range: 0-500/zoom units
+        double range1 = Math.min(scaledBoundary1, distance);
+        pixelPos += (int)(range1 * 0.21 * zoom);
 
-            // Second range: 501-1000 units
-            double range2 = Math.min(1000, distance) - 500;
-            if (range2 > 0) {
-                pixelPos += (int) (range2 * 0.068);
-            }
-
-            if (distance <= 1000) {
-                return pixelPos;
-            }
-
-            // Third range: 1001-2000 units
-            double range3 = Math.min(2000, distance) - 1000;
-            if (range3 > 0) {
-                pixelPos += (int) (range3 * 0.034);
-            }
-
-            if (distance <= 2000) {
-                return pixelPos;
-            }
-
-            // Fourth range: 2001+ units
-            double range4 = distance - 2000;
-            pixelPos += (int) (range4 * 0.017);
-
+        if (distance <= scaledBoundary1) {
             return pixelPos;
         }
-        else{return 0;}
+
+        // Second range: 501-1000/zoom units
+        double range2 = Math.min(scaledBoundary2, distance) - scaledBoundary1;
+        pixelPos += (int)(range2 * 0.068 * zoom);
+
+        if (distance <= scaledBoundary2) {
+            return pixelPos;
+        }
+
+        // Third range: 1001-2000/zoom units
+        double range3 = Math.min(scaledBoundary3, distance) - scaledBoundary2;
+        pixelPos += (int)(range3 * 0.034 * zoom);
+
+        if (distance <= scaledBoundary3) {
+            return pixelPos;
+        }
+
+        // Fourth range: 2001+ units
+        double range4 = distance - scaledBoundary3;
+        pixelPos += (int)(range4 * 0.017 * zoom);
+
+        return pixelPos;
     }
 
     /**
@@ -596,7 +562,8 @@ public class ETCS {
                 cachedServiceBrakingDist,
                 cachedWarningBrakingDist,
                 cachedCurveIsDropping,
-                cachedSpeedLimits
+                cachedSpeedLimits,
+                zoom
         );
 
         // Send to all players
@@ -605,7 +572,7 @@ public class ETCS {
 
     public void updateFromNetwork(double distanceToSignal, double speedLimit, float needleRotation, boolean backward,
                                   double emergencyBrakingDist, double serviceBrakingDist, double warningBrakingDist,
-                                  boolean curveIsDropping, List<SpeedLimit> speedLimits) {
+                                  boolean curveIsDropping, List<SpeedLimit> speedLimits,int zoom) {
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
         this.needleRotationDegrees = needleRotation;
@@ -619,7 +586,7 @@ public class ETCS {
         this.cachedServiceBrakingDist = serviceBrakingDist;
         this.cachedWarningBrakingDist = warningBrakingDist;
         this.cachedCurveIsDropping = curveIsDropping;
-
+        this.zoom = zoom;
         this.lastUpdateTime = System.currentTimeMillis();
         // Clear the sync flag since we just received fresh data
         this.needsSync = false;
@@ -645,6 +612,8 @@ public class ETCS {
         etcsData.putDouble("warningBrakingDist", cachedWarningBrakingDist);
         etcsData.putBoolean("curveIsDropping", cachedCurveIsDropping);
         etcsData.putDouble("allowedSpeed", cachedAllowedSpeed);
+        etcsData.putDouble("zoom", zoom);
+        etcsData.putInt("trackspeedlimit", trackspeedlimit);
         
         // Save speed limits
         CompoundTag speedLimitsTag = new CompoundTag();
@@ -680,6 +649,8 @@ public class ETCS {
         this.cachedWarningBrakingDist = etcsData.getDouble("warningBrakingDist");
         this.cachedCurveIsDropping = etcsData.getBoolean("curveIsDropping");
         this.cachedAllowedSpeed = etcsData.getDouble("allowedSpeed");
+        this.zoom = etcsData.getInt("zoom");
+        this.trackspeedlimit = etcsData.getInt("trackspeedlimit");
         
         // Load speed limits
         if (etcsData.contains("speedLimits")) {
@@ -695,4 +666,58 @@ public class ETCS {
         }
     }
 
+    private void sendKeysToServer() {
+        boolean plusKeyDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_EQUALS);
+        boolean minusKeyDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_MINUS);
+        long currentTime = System.currentTimeMillis();
+
+        // Detect key press events (transition from not pressed to pressed)
+        if (plusKeyDown && !plusKeyWasDown && currentTime - lastKeyPressTime > KEY_COOLDOWN_MS) {
+            RNetworking.sendToServer(new SteerDirectionPacket(PLUS));
+            lastKeyPressTime = currentTime;
+        } else if (minusKeyDown && !minusKeyWasDown && currentTime - lastKeyPressTime > KEY_COOLDOWN_MS) {
+            RNetworking.sendToServer(new SteerDirectionPacket(MINUS));
+            lastKeyPressTime = currentTime;
+        } else if (!plusKeyDown && !minusKeyDown) {
+            // Only send NONE when both keys are released
+            RNetworking.sendToServer(new SteerDirectionPacket(NONE));
+        }
+
+        // Update previous key states
+        plusKeyWasDown = plusKeyDown;
+        minusKeyWasDown = minusKeyDown;
+    }
+
+    private void ReciveKeys() {
+        Optional<UUID> controllingPlayerUuid = train.carriages.stream()
+                .flatMap(carriage -> {
+                    CarriageContraptionEntity entity = carriage.anyAvailableEntity();
+                    return entity != null ? Stream.of(entity.getControllingPlayer()) : Stream.empty();
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+
+        if (!controllingPlayerUuid.isPresent()) return;
+
+        SteerDirectionPacket.KeyPressType currentKeyPress = SteerDirectionPacket.getPlayerKeyPress(controllingPlayerUuid.get());
+
+        // Only process key press once
+        switch (currentKeyPress) {
+            case PLUS:
+                if (zoom < 4) {
+                    zoom *= 2;
+                    // Reset key state after processing
+                    SteerDirectionPacket.setPlayerKeyPresses(controllingPlayerUuid.get(), NONE);
+                }
+                break;
+            case MINUS:
+                if (zoom > 1) {
+                    zoom /= 2;
+                    // Reset key state after processing
+                    SteerDirectionPacket.setPlayerKeyPresses(controllingPlayerUuid.get(), NONE);
+                }
+                break;
+        }
+    }
 }

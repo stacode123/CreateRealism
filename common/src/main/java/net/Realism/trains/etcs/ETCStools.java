@@ -10,7 +10,7 @@ public class ETCStools {
      * Calculate the needle rotation angle based on current train speed
      */
     public static float calculateNeedleRotation(double trainSpeed) {
-        float rotationDegrees = 0f;
+        float rotationDegrees;
 
         float speedKmh = (float) Math.abs(trainSpeed * 20 * 3.6f);
 
@@ -75,8 +75,8 @@ public class ETCStools {
         }
 
         // Add a 16 pixel wide indicator extending inward at the end of the arc
-        float endX = (float)Math.cos(endAngleRad) * (radius - arcWidth/2);
-        float endY = (float)Math.sin(endAngleRad) * (radius - arcWidth/2);
+        float endX = (float)Math.cos(endAngleRad) * (radius - (float) arcWidth /2);
+        float endY = (float)Math.sin(endAngleRad) * (radius - (float) arcWidth /2);
 
         // Calculate the inner point 16 pixels inward
         float innerEndX = (float)Math.cos(endAngleRad) * (radius - arcWidth - 16);
@@ -136,5 +136,7 @@ public class ETCStools {
             }
         }
     }
+
+
 }
 

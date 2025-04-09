@@ -28,10 +28,12 @@ public class ETCSSyncPacket implements S2CPacket {
     private final double warningBrakingDist;
     private final boolean cachedCurveIsDropping;
     private final List<SpeedLimit> speedLimits;
+    private final int zoom;
 
     public ETCSSyncPacket(UUID trainId, double distanceToSignal, double speedLimit, float needleRotation, 
                          boolean backward, double emergencyBrakingDist, double serviceBrakingDist, 
-                         double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits) {
+                         double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits,int zoom
+    ) {
         this.trainId = trainId;
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
@@ -42,6 +44,7 @@ public class ETCSSyncPacket implements S2CPacket {
         this.warningBrakingDist = warningBrakingDist;
         this.cachedCurveIsDropping = cachedCurveIsDropping;
         this.speedLimits = speedLimits;
+        this.zoom = zoom;
     }
 
     public static ETCSSyncPacket read(FriendlyByteBuf buffer) {
@@ -54,6 +57,7 @@ public class ETCSSyncPacket implements S2CPacket {
         double serviceBrakingDist = buffer.readDouble();
         double warningBrakingDist = buffer.readDouble();
         boolean cachedCurveIsDropping = buffer.readBoolean();
+        int zoom = buffer.readInt();
         int speedLimitCount = buffer.readInt();
         List<SpeedLimit> speedLimits = new ArrayList<>();
         for (int i = 0; i < speedLimitCount; i++) {
@@ -65,7 +69,7 @@ public class ETCSSyncPacket implements S2CPacket {
 
 
         return new ETCSSyncPacket(trainId, distanceToSignal, speedLimit, needleRotation, backward,
-                emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping, speedLimits);
+                emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping, speedLimits,zoom);
     }
 
 
@@ -80,6 +84,7 @@ public class ETCSSyncPacket implements S2CPacket {
         buffer.writeDouble(serviceBrakingDist);
         buffer.writeDouble(warningBrakingDist);
         buffer.writeBoolean(cachedCurveIsDropping);
+        buffer.writeInt(zoom);
         
         // Write speed limits
         buffer.writeInt(speedLimits.size());
@@ -107,14 +112,14 @@ public class ETCSSyncPacket implements S2CPacket {
 
                     trainInterface.realism$getETCS().updateFromNetwork(
                             distanceToSignal, speedLimit, needleRotation, backward,
-                            emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,speedLimits
+                            emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,speedLimits,zoom
                     );
                 }
             } catch (Exception e) {
                 RealismMod.LOGGER.error("Error handling ETCS sync packet", e);
             }
         });
-    ;}
+    }
 
 
 

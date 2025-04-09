@@ -4,6 +4,7 @@ import com.simibubi.create.foundation.utility.Components;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import io.netty.buffer.Unpooled;
 import net.Realism.network.ETCSSyncPacket;
+import net.Realism.network.SteerDirectionPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
@@ -24,10 +25,10 @@ public class RNetworking {
     private static final String VERSION = "4";
     private static int id = 0;
 
-    private static Map<Class<? extends C2SPacket>, Integer> c2sIdentifiers = new HashMap<>();
-    private static Map<Class<? extends S2CPacket>, Integer> s2cIdentifiers = new HashMap<>();
-    private static Map<Integer, Function<FriendlyByteBuf, ? extends C2SPacket>> c2sReaders = new HashMap<>();
-    private static Map<Integer, Function<FriendlyByteBuf, ? extends S2CPacket>> s2cReaders = new HashMap<>();
+    private static final Map<Class<? extends C2SPacket>, Integer> c2sIdentifiers = new HashMap<>();
+    private static final Map<Class<? extends S2CPacket>, Integer> s2cIdentifiers = new HashMap<>();
+    private static final Map<Integer, Function<FriendlyByteBuf, ? extends C2SPacket>> c2sReaders = new HashMap<>();
+    private static final Map<Integer, Function<FriendlyByteBuf, ? extends S2CPacket>> s2cReaders = new HashMap<>();
 
     private static class CheckVersionS2CPacket implements S2CPacket {
         private final String serverVersion;
@@ -140,6 +141,10 @@ public class RNetworking {
                 ETCSSyncPacket.class,
                 ETCSSyncPacket::read
 
+        );
+        registerC2S(
+                SteerDirectionPacket.class
+                , SteerDirectionPacket::read
         );
 
     }

@@ -1,6 +1,5 @@
 package net.Realism.trains;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
@@ -12,7 +11,6 @@ import com.simibubi.create.content.trains.signal.TrackEdgePoint;
 import com.simibubi.create.foundation.utility.Couple;
 import com.simibubi.create.foundation.utility.Pair;
 import net.Realism.compat.TramwaysCompat;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -83,15 +81,8 @@ public class SignalFinder {
         Map<UUID, Pair<SignalBoundary, Boolean>> chainedGroups = new HashMap<>();
 
         TravellingPoint.SteerDirection steerDirection = TravellingPoint.SteerDirection.NONE;
-        if (Minecraft.getInstance().player != null) {
-            // Check for A key (turn left)
-            if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_A)) {
-                steerDirection = TravellingPoint.SteerDirection.LEFT;
-            }
-            // Check for D key (turn right)
-            else if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), InputConstants.KEY_D)) {
-                steerDirection = TravellingPoint.SteerDirection.RIGHT;
-            }
+        if (train.manualSteer != null) {
+            steerDirection = train.manualSteer;
         }
 
         // Travel along the track
@@ -141,8 +132,7 @@ public class SignalFinder {
                         }
                         if (occupied) {
                             result.addSignal(signal, distance, primary, occupied, crossSignal, entering);
-                            if (!crossSignal)
-                                return true; // Stop at blocked entry signal
+                            return !crossSignal; // Stop at blocked entry signal
                         }
                     } else if (crossSignalTracked) {
                         chainedGroups.put(entering, Pair.of(signal, primary));
@@ -168,8 +158,8 @@ public class SignalFinder {
     }
 
     public static class SignalScanResult {
-        private List<SignalInfo> signals = new ArrayList<>();
-        private List<TramSignInfo> tramSigns = new ArrayList<>();
+        private final List<SignalInfo> signals = new ArrayList<>();
+        private final List<TramSignInfo> tramSigns = new ArrayList<>();
 
         public void addSignal(SignalBoundary signal, double distance, boolean primary,
                               boolean occupied, boolean isCrossSignal, UUID groupId) {
