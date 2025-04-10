@@ -38,7 +38,7 @@ public class RealismConfig {
             ETCSEnable = builder.comment("Enable ETCS for trains")
                     .define("ETCS Enable", true);
             ETCSSize = builder.comment("Size of the ETCS display")
-                    .defineInRange("ETCS Size", 0.5, 0.1, 1.5);
+                    .defineInRange("ETCS Size", 0.25, 0.1, 2);
             builder.pop();
             debugMode = builder.comment("Enable debug mode to see the modified acceleration")
                     .define("debugMode", false);

@@ -112,10 +112,14 @@ public class ETCS {
 
             // Process tram signs for speed limits
             if (isTramwaysLoaded()) {
+                if (trackspeedlimit==0){
+                    trackspeedlimit = 20;
+                }
                 cachedSpeedLimits = TramwaysCompat.processTramSigns(s,train.maxSpeed()*20*3.6f);
             } else {
                 // Reset speed limits when Tramways isn't loaded
                 cachedSpeedLimits = new ArrayList<>();
+                trackspeedlimit = 300;
             }
 
             float distance = (float) s.getDistanceToClosestOccupiedSignal();
@@ -159,15 +163,17 @@ public class ETCS {
         PoseStack posestack = graphics.pose();
         double ScaleFactor = RealismConfig.CLIENT.ETCSSize.get();
         posestack.pushPose();
-        posestack.scale((float) (0.25f*ScaleFactor), (float) (0.25f*ScaleFactor), (float) (0.25f*ScaleFactor));
+        posestack.scale((float) ScaleFactor, (float) ScaleFactor, (float) ScaleFactor);
         sendKeysToServer();
         
         int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         Minecraft.getInstance().getWindow();
-        // When player presses the "increase" key
-        int xPos = (int) ((screenWidth * 4/ScaleFactor) - 536);  // 10 scaled pixels from right edge
+        int xPos = (int) ((screenWidth/ScaleFactor) - 536);  // 10 scaled pixels from right edge
         int yPos = 0;
-        
+
+        if (zoom == 0){
+            zoom = 1;
+        }
         // Render the ETCS panel background
         String zoomTexture = String.format("realism:textures/etcszoom%d.png", zoom);
         RenderSystem.setShaderTexture(0, new ResourceLocation(zoomTexture));
@@ -612,7 +618,7 @@ public class ETCS {
         etcsData.putDouble("warningBrakingDist", cachedWarningBrakingDist);
         etcsData.putBoolean("curveIsDropping", cachedCurveIsDropping);
         etcsData.putDouble("allowedSpeed", cachedAllowedSpeed);
-        etcsData.putDouble("zoom", zoom);
+        etcsData.putInt("zoom", zoom);
         etcsData.putInt("trackspeedlimit", trackspeedlimit);
         
         // Save speed limits
@@ -701,7 +707,9 @@ public class ETCS {
         if (!controllingPlayerUuid.isPresent()) return;
 
         SteerDirectionPacket.KeyPressType currentKeyPress = SteerDirectionPacket.getPlayerKeyPress(controllingPlayerUuid.get());
-
+        if (zoom == 0){
+            zoom = 1;
+        }
         // Only process key press once
         switch (currentKeyPress) {
             case PLUS:
