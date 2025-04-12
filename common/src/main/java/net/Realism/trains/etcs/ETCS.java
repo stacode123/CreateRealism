@@ -58,7 +58,6 @@ public class ETCS {
     private boolean cachedCurveIsDropping = false;
     private double cachedAllowedSpeed = -1;
     private List<SpeedLimit> cachedSpeedLimits = new ArrayList<>();
-    private final Font font = Minecraft.getInstance().font;
 
     private boolean plusKeyWasDown = false;
     private boolean minusKeyWasDown = false;
@@ -368,6 +367,7 @@ public class ETCS {
     }
 
     public void renderOverviewItems(GuiGraphics graphics, int xPos, int yPos, int zoom) {
+        Font font = Minecraft.getInstance().font;
         ResourceLocation flag = new ResourceLocation("realism:textures/flag.png");
             for (SpeedLimit s : cachedSpeedLimits){
                 if (s.getDistance() > distanceToSignal){continue;}

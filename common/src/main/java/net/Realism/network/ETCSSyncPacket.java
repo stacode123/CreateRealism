@@ -96,9 +96,6 @@ public class ETCSSyncPacket implements S2CPacket {
 
     @Override
     public void handle(Minecraft mc) {
-        Level level = mc.level;
-        if (level == null) return;
-        MinecraftServer server = level.getServer();
 
         // Schedule task to run on the main client thread
         mc.execute(() -> {
