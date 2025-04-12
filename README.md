@@ -2,6 +2,8 @@
 
 ## A Create addon that adds a bunch of features to make Create trains more realistic.
 
+[**WIKI**](https://github.com/stacode123/CreateRealism/wiki)
+
 ### Features:
 
 #### -Changes the acceleration of trains to be dependent on the amount of cars attached to the train.
