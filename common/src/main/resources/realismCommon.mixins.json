@@ -8,7 +8,9 @@
   "mixins": [
     "BezierConnectionMixin",
     "TrackPlacementMixin",
-    "TrainMixin"
+    "TrainMixin",
+    "CarriageContraptionEntityMixin",
+
   ],
   "injectors": {
     "defaultRequire": 1

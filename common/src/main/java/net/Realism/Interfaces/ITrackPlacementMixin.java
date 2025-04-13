@@ -1,6 +1,6 @@
 package net.Realism.Interfaces;
 
-public interface TrackPlacementMixinStraight {
+public interface ITrackPlacementMixin {
     boolean isStraight();
 
     boolean isSlope();

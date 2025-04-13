@@ -3,7 +3,8 @@
   "package": "net.Realism.forge.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "TrackPlacementOverlayMixin"
+    "TrackPlacementOverlayMixin",
+    "TrainHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

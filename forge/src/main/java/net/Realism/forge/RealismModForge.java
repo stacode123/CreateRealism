@@ -5,6 +5,7 @@ import net.Realism.RealismMod;
 import net.Realism.forge.config.ForgeConfigRegistration;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(RealismMod.MOD_ID)
@@ -14,6 +15,15 @@ public class RealismModForge {
         IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         RealismBlocks.REGISTRATE.registerEventListeners(eventBus);
         RealismMod.init();
+        eventBus.addListener(this::commonSetup);
         ForgeConfigRegistration.register();
     }
+    public void commonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            RNetworkingImpl.init();
+            RealismMod.commonSetup();
+        });
+
+    }
+
 }

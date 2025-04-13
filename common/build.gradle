@@ -25,6 +25,7 @@ repositories {
     maven { url = "https://maven.terraformersmc.com/releases" } // Mod Menu, EMI
     maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
 
+
 }
 
 dependencies {
@@ -40,4 +41,10 @@ dependencies {
 
     // ForgeConfigAPIPort dependency for configs
     modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.2")
+    modCompileOnly("purplecreate.tramways:tramways-common:$tramways_version-common-1")
+    // Add this for MixinExtras
+    implementation "io.github.llamalad7:mixinextras-common:0.3.5"
+    annotationProcessor "io.github.llamalad7:mixinextras-common:0.3.5"
+
+
 }

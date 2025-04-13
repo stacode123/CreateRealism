@@ -43,6 +43,11 @@ dependencies {
 
     // if you would like to add integration with JEI, uncomment this line.
     //    modCompileOnly("mezz.jei:jei-$minecraft_version:$jei_version:api")
+    modCompileOnly("purplecreate.tramways:tramways-forge:$tramways_version-forge-1")
+
+    // Add this for MixinExtras
+    implementation "io.github.llamalad7:mixinextras-forge:0.3.5"
+    annotationProcessor "io.github.llamalad7:mixinextras-forge:0.3.5"
 }
 
 processResources {

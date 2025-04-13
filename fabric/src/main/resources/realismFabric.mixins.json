@@ -6,7 +6,8 @@
   "client": [
   ],
   "mixins": [
-    "TrackPlacementOverlayMixin"
+    "TrackPlacementOverlayMixin",
+    "TrainHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1
