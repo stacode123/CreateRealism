@@ -4,9 +4,11 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.simibubi.create.content.kinetics.gauge.GaugeInstance;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import com.simibubi.create.content.trains.entity.Train;
 import net.Realism.RNetworking;
+import net.Realism.RealismSounds;
 import net.Realism.compat.TramwaysCompat;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.ETCSSyncPacket;
@@ -19,6 +21,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.Realism.trains.SignalFinder.*;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 
 import java.util.*;
@@ -28,6 +31,7 @@ import static net.Realism.compat.isModLoaded.isTramwaysLoaded;
 import static net.Realism.network.SteerDirectionPacket.KeyPressType.*;
 import static net.Realism.trains.etcs.ETCStools.optimizedRenderSpeedCurve;
 import static net.Realism.trains.etcs.ETCStools.renderElement;
+
 
 
 public class ETCS {
@@ -48,8 +52,10 @@ public class ETCS {
     private static final int SYNC_INTERVAL_MS = 200; // Sync every 200ms
 
     private int curvedropping;
-    private int diffrenceCounter=0;
+    private int diffrenceCounter = 0;
     private int zoom = 1;
+    // Flag to trigger info sound when a new route is detected
+    private boolean pendingNewRouteSound = false;
 
     // Braking distances
     private double cachedEmergencyBrakingDist;
@@ -58,6 +64,7 @@ public class ETCS {
     private boolean cachedCurveIsDropping = false;
     private double cachedAllowedSpeed = -1;
     private List<SpeedLimit> cachedSpeedLimits = new ArrayList<>();
+    private double distanceToBrakingPoint;
 
     private boolean plusKeyWasDown = false;
     private boolean minusKeyWasDown = false;
@@ -95,12 +102,14 @@ public class ETCS {
             // Logic to decide whether to use previous scan result
             if (previousSignalScanResult != null) {
                 if (diffrenceCounter<10){
-                if (((Math.abs(s.getDistanceToClosestOccupiedSignal() - previousSignalScanResult.getDistanceToClosestOccupiedSignal()) > 100)
+                if (((Math.abs(s.getDistanceToClosestOccupiedSignal() - previousSignalScanResult.getDistanceToClosestOccupiedSignal()) > 30)
                         && backward == previousBackward)) {
-                    diffrenceCounter+=1;
+
+                    diffrenceCounter += 1;
                     s = previousSignalScanResult;
                 }}
                 else {
+                    pendingNewRouteSound = true;
                     diffrenceCounter = 0;
                 }
             }
@@ -198,6 +207,24 @@ public class ETCS {
                 49, 112,   // width and height to render
                 49, 112);
         posestack.popPose();
+        // Play info sound when a new route is detected
+        if (pendingNewRouteSound) {
+            Minecraft mc = Minecraft.getInstance();
+            Level level = mc.level;
+            if (level != null) {
+                level.playSound(
+                        Minecraft.getInstance().player, // Only this player will hear the sound
+                        Minecraft.getInstance().player.getX(),
+                        Minecraft.getInstance().player.getY(),
+                        Minecraft.getInstance().player.getZ(),
+                        RealismSounds.ETCS_BEEP.get(),
+                        SoundSource.MASTER,
+                        1.0F, // Volume
+                        1.0F  // Pitch
+                );
+            }
+            pendingNewRouteSound = false;
+        }
 
         //graphics.drawString(mc.font,String.valueOf((int)train.speed*20*3.6),xPos + 156,yPos+124,0x294A6DFF);
 
@@ -369,15 +396,21 @@ public class ETCS {
     public void renderOverviewItems(GuiGraphics graphics, int xPos, int yPos, int zoom) {
         Font font = Minecraft.getInstance().font;
         ResourceLocation flag = new ResourceLocation("realism:textures/flag.png");
-            for (SpeedLimit s : cachedSpeedLimits){
-                if (s.getDistance() > distanceToSignal){continue;}
-                int pixelPos = calculateDistancePixelPosition(s.getDistance(),zoom);
-                //int pixelPos = 1;
-                // Render the item at the calculated position
-                renderElement(graphics, flag, xPos+386 , yPos +235 - pixelPos, 19, 11);
-                graphics.drawString(font, String.valueOf((int)s.getSpeedLimit()), xPos+406, yPos+235 - pixelPos, 0xFFFFFFFF);
+        for (SpeedLimit s : cachedSpeedLimits){
+            if (s.getDistance() > distanceToSignal){continue;}
+            int pixelPos = calculateDistancePixelPosition(s.getDistance(), zoom);
+            //int pixelPos = 1;
+            // Render the item at the calculated position
+            renderElement(graphics, flag, xPos+386 , yPos +235 - pixelPos, 19, 11);
+            graphics.drawString(font, String.valueOf((int)s.getSpeedLimit()), xPos+406, yPos+235 - pixelPos, 0xFFFFFFFF);
+        }
+        if( distanceToBrakingPoint >0 && distanceToBrakingPoint < (4000/zoom)){
+            int pixelPos = calculateDistancePixelPosition(distanceToBrakingPoint, zoom);
+            //int pixelPos = 1;
+            // Render the item at the calculated position
+            graphics.fill(xPos+396, yPos+235-pixelPos, xPos+471, yPos+238-pixelPos, 0xFFFFFF00);
+        }
 
-            }
 
 
 
@@ -451,12 +484,9 @@ public class ETCS {
         float safetyFactor = 1.2f;
 
         // Calculate safe speed based on distance to signal
-        if (distance < 50) {
-            return 20;
-        }
-
         float safeSpeed = (float) (Math.sqrt(2 * (maxDeceleration * 0.7) * distance) * 3.6);
-
+        float SignalsafeDistance = (float) ((Math.pow(((float)trackspeedlimit/3.6f), 2f) / (2f * (maxDeceleration * 0.7f)))/safetyFactor)+100;
+        float DistanceToBrakingPointSignal = distance - SignalsafeDistance;
         if (distance < 100) {
             safeSpeed *= (distance / 100f) * 0.8f;
         } else if (distance < 300) {
@@ -469,44 +499,45 @@ public class ETCS {
         
         // Check for speed limits from tram signs
         int limitBasedSpeed = Integer.MAX_VALUE;
+        float safeDistanceSign = Float.MAX_VALUE;
         for (SpeedLimit speedLimit : cachedSpeedLimits) {
             // Only consider speed limits that are ahead of us but within our calculation distance
             if (speedLimit.getDistance() > 0 && speedLimit.getDistance() <= distance * 1.5) {
-                // Calculate safe speed based on distance to limit using physics formula
                 float distToLimit = (float) speedLimit.getDistance();
                 float targetSpeed = (float) speedLimit.getSpeedLimit() / 3.6f; // Convert km/h to m/s
-
-// Physics formula: v₁ = √(v₂² + 2ad) where v₂ is target speed, not zero
                 float targetSpeedSq = targetSpeed * targetSpeed;
                 safeSpeed = (float) (Math.sqrt(targetSpeedSq + 2 * (maxDeceleration * 0.7) * distToLimit) * 3.6);
+                safeDistanceSign = (float) ((Math.pow((float)trackspeedlimit/3.6f, 2f) / (2f * (maxDeceleration * 0.7f)))/safetyFactor)+100;
+                float DistanceToBrakingPointSign = (float) (speedLimit.distance - safeDistanceSign);
+                if (DistanceToBrakingPointSign<DistanceToBrakingPointSignal){
+                    DistanceToBrakingPointSignal = DistanceToBrakingPointSign;
+                }
 
-// Apply safety adjustments based on distance
-//                if (distToLimit < 100) {
-//                    safeSpeed = (float) Math.min(safeSpeed, speedLimit.getSpeedLimit() + (distToLimit / 100f) * 20f);
-//                } else if (distToLimit < 300) {
-//                    safeSpeed = (float) safeSpeed * 0.9f;
-//                }else if (distToLimit < 400) {
-//                      safeSpeed = (float) safeSpeed * 0.925f;
-//                }
-//                else if (distToLimit < 500) {
-//                    safeSpeed = (float) safeSpeed * 0.95f;
-//                }
 
-                int adjustedLimit = (int)(safeSpeed);
-
+                int adjustedLimit = (int) (safeSpeed);
                 if (adjustedLimit < limitBasedSpeed) {
                     limitBasedSpeed = adjustedLimit;
                 }
             }
-            if(speedLimit.getDistance()<5){
-                trackspeedlimit = (int)speedLimit.getSpeedLimit();
+            if (speedLimit.getDistance() < 5) {
+                trackspeedlimit = (int) speedLimit.getSpeedLimit();
             }
         }
-        
-        // Return the most restrictive of signal-based and limit-based speeds
-        return limitBasedSpeed < Integer.MAX_VALUE ? 
-               Math.min(signalBasedSpeed, limitBasedSpeed) : 
-               signalBasedSpeed;
+
+        // Enforce minimum speed
+        if (signalBasedSpeed < 20) {
+            signalBasedSpeed = 20;
+        }
+
+        // Return the most restrictive speed and the braking distance
+        int allowedSpeed = limitBasedSpeed < Integer.MAX_VALUE ?
+                Math.min(signalBasedSpeed, limitBasedSpeed) :
+                signalBasedSpeed;
+
+        // If no valid braking distance was found, set to -1 or another sentinel value
+
+        distanceToBrakingPoint = DistanceToBrakingPointSignal;
+        return allowedSpeed;
     }
 
     private void updateBrakingDistances() {
@@ -557,7 +588,7 @@ public class ETCS {
         MinecraftServer server = level.getServer();
         if (server == null) return;
 
-        // Create and send the sync packet
+        // Create and send the sync packet, including new-route sound flag
         ETCSSyncPacket packet = new ETCSSyncPacket(
                 train.id,
                 distanceToSignal,
@@ -569,16 +600,21 @@ public class ETCS {
                 cachedWarningBrakingDist,
                 cachedCurveIsDropping,
                 cachedSpeedLimits,
-                zoom
+                zoom,
+                pendingNewRouteSound,
+                distanceToBrakingPoint
         );
 
         // Send to all players
         RNetworking.sendToAll(packet);
+        // Clear the new-route sound flag on server after sending
+        pendingNewRouteSound = false;
     }
 
     public void updateFromNetwork(double distanceToSignal, double speedLimit, float needleRotation, boolean backward,
                                   double emergencyBrakingDist, double serviceBrakingDist, double warningBrakingDist,
-                                  boolean curveIsDropping, List<SpeedLimit> speedLimits,int zoom) {
+                                  boolean curveIsDropping, List<SpeedLimit> speedLimits, int zoom,
+                                  boolean newRouteSound, double distanceToBrakingPoint) {
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
         this.needleRotationDegrees = needleRotation;
@@ -593,6 +629,9 @@ public class ETCS {
         this.cachedWarningBrakingDist = warningBrakingDist;
         this.cachedCurveIsDropping = curveIsDropping;
         this.zoom = zoom;
+        this.distanceToBrakingPoint = distanceToBrakingPoint;
+        // Trigger sound on client side if new route detected
+        this.pendingNewRouteSound = newRouteSound;
         this.lastUpdateTime = System.currentTimeMillis();
         // Clear the sync flag since we just received fresh data
         this.needsSync = false;
@@ -729,3 +768,4 @@ public class ETCS {
         }
     }
 }
+

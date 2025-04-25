@@ -13,6 +13,7 @@ public class RealismMod {
     public static void init() {
         LOGGER.info("{} initializing! Create version: {} on platform: {}", NAME, Create.VERSION, RealismExpectPlatform.platformName());
         RealismBlocks.init();
+        RealismSounds.SOUND_EVENTS.register();
     }
 
     public static void commonSetup() {

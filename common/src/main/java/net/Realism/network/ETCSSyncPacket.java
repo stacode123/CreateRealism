@@ -29,11 +29,13 @@ public class ETCSSyncPacket implements S2CPacket {
     private final boolean cachedCurveIsDropping;
     private final List<SpeedLimit> speedLimits;
     private final int zoom;
+    private final boolean newRoute;
+    private final double distanceToBrakingPoint;
 
-    public ETCSSyncPacket(UUID trainId, double distanceToSignal, double speedLimit, float needleRotation, 
-                         boolean backward, double emergencyBrakingDist, double serviceBrakingDist, 
-                         double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits,int zoom
-    ) {
+    public ETCSSyncPacket(UUID trainId, double distanceToSignal, double speedLimit, float needleRotation,
+                         boolean backward, double emergencyBrakingDist, double serviceBrakingDist,
+                         double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits,
+                         int zoom, boolean newRoute, double distanceToBrakingPoint) {
         this.trainId = trainId;
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
@@ -45,6 +47,8 @@ public class ETCSSyncPacket implements S2CPacket {
         this.cachedCurveIsDropping = cachedCurveIsDropping;
         this.speedLimits = speedLimits;
         this.zoom = zoom;
+        this.newRoute = newRoute;
+        this.distanceToBrakingPoint = distanceToBrakingPoint;
     }
 
     public static ETCSSyncPacket read(FriendlyByteBuf buffer) {
@@ -58,6 +62,9 @@ public class ETCSSyncPacket implements S2CPacket {
         double warningBrakingDist = buffer.readDouble();
         boolean cachedCurveIsDropping = buffer.readBoolean();
         int zoom = buffer.readInt();
+        // Read new route flag
+        boolean newRoute = buffer.readBoolean();
+        double distanceToBrakingPoint = buffer.readDouble();
         int speedLimitCount = buffer.readInt();
         List<SpeedLimit> speedLimits = new ArrayList<>();
         for (int i = 0; i < speedLimitCount; i++) {
@@ -66,10 +73,9 @@ public class ETCSSyncPacket implements S2CPacket {
             speedLimits.add(new SpeedLimit(distance, limit));
         }
 
-
-
         return new ETCSSyncPacket(trainId, distanceToSignal, speedLimit, needleRotation, backward,
-                emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping, speedLimits,zoom);
+                emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,
+                speedLimits, zoom, newRoute, distanceToBrakingPoint);
     }
 
 
@@ -85,7 +91,10 @@ public class ETCSSyncPacket implements S2CPacket {
         buffer.writeDouble(warningBrakingDist);
         buffer.writeBoolean(cachedCurveIsDropping);
         buffer.writeInt(zoom);
-        
+        // Write new route flag
+        buffer.writeBoolean(newRoute);
+        // Write distance to braking point
+        buffer.writeDouble(distanceToBrakingPoint);
         // Write speed limits
         buffer.writeInt(speedLimits.size());
         for (SpeedLimit limit : speedLimits) {
@@ -96,7 +105,6 @@ public class ETCSSyncPacket implements S2CPacket {
 
     @Override
     public void handle(Minecraft mc) {
-
         // Schedule task to run on the main client thread
         mc.execute(() -> {
             try {
@@ -109,7 +117,8 @@ public class ETCSSyncPacket implements S2CPacket {
 
                     trainInterface.realism$getETCS().updateFromNetwork(
                             distanceToSignal, speedLimit, needleRotation, backward,
-                            emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,speedLimits,zoom
+                            emergencyBrakingDist, serviceBrakingDist, warningBrakingDist,
+                            cachedCurveIsDropping, speedLimits, zoom, newRoute, distanceToBrakingPoint
                     );
                 }
             } catch (Exception e) {
@@ -117,7 +126,4 @@ public class ETCSSyncPacket implements S2CPacket {
             }
         });
     }
-
-
-
 }
