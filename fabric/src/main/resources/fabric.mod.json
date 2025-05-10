@@ -26,9 +26,10 @@
     "minecraft": "${minecraft_version}",
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": ">=${fabric_api_version}",
-    "create": "${create_version}"
+    "create": "${create_version}",
+    "architectury": ">=${architectury_api_version}"
   },
   "recommends": {
-    "tramways": ">=0.2.1"
+    "tramways": ">${tramways_version}"
   }
 }

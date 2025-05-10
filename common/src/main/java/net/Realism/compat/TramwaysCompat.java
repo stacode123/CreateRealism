@@ -1,5 +1,6 @@
 package net.Realism.compat;
 
+import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.foundation.utility.Couple;
 import net.Realism.Interfaces.ITramSignPoint;
 import net.Realism.RealismMod;
@@ -11,11 +12,12 @@ import purplecreate.tramways.content.signs.TramSignPoint;
 import purplecreate.tramways.content.signs.demands.SignDemand;
 import purplecreate.tramways.content.signs.demands.TemporaryEndSignDemand;
 import purplecreate.tramways.content.signs.demands.TemporarySpeedSignDemand;
+import purplecreate.tramways.mixinInterfaces.ISpeedLimitableTrain;
 
 import java.util.*;
 
 public class TramwaysCompat {
-    private static boolean tramwaysLoaded = false;
+    private static boolean tramwaysLoaded;
 
     static {
         try {
@@ -26,12 +28,12 @@ public class TramwaysCompat {
         }
     }
 
-    public static List<ETCS.SpeedLimit> processTramSigns(SignalFinder.SignalScanResult s, double Mspeed) {
+    public static List<ETCS.SpeedLimit> processTramSigns(SignalFinder.SignalScanResult s, double Mspeed, Train train) {
 
         try {
             // All Tramways-specific code moved here
             // This is only accessed through reflection when the mod is loaded
-            return TramwaysCompat.processTramSignsImpl(s,Mspeed);
+            return TramwaysCompat.processTramSignsImpl(s,Mspeed,train);
         } catch (Throwable e) {
             RealismMod.LOGGER.error("Failed to process tram signs", e);
             return new ArrayList<>();
@@ -40,11 +42,13 @@ public class TramwaysCompat {
 
     // Static initialization ensures this only runs if Tramways exists
 
-    public static List<ETCS.SpeedLimit> processTramSignsImpl(SignalFinder.SignalScanResult s, double maxSpeed) {
+    public static List<ETCS.SpeedLimit> processTramSignsImpl(SignalFinder.SignalScanResult s, double maxSpeed,Train train) {
         List<ETCS.SpeedLimit> cachedSpeedLimits = new ArrayList<>();
         try {
 
             cachedSpeedLimits = new ArrayList<>();
+            boolean first = true;
+            int LastLimit = 300;
             for (SignalFinder.TramSignInfo sign : s.getTramSigns()) {
                 if (sign == null || sign.getSign() == null) continue;
                 Couple<Set<TramSignPoint.SignData>> sides = null;
@@ -64,11 +68,11 @@ public class TramwaysCompat {
                 if (sides == null) continue;
                 CompoundTag tag = null;
                 SignDemand demand = null;
-                int LastLimit = 300;
+
                 if (sides.get(sign.getPrimary()) == null) continue;
                 for (TramSignPoint.SignData signD : new HashSet<>(sides.get(sign.getPrimary()))) {
                     if (signD == null) continue;
-                    if (!(signD instanceof TramSignDataAccessor)) {
+                    if (!(signD instanceof TramSignDataAccessor accessor)) {
                         try {
                             java.lang.reflect.Field demandFieldExtra = TramSignPoint.SignData.class.getDeclaredField("demandExtra");
                             java.lang.reflect.Field demandField = TramSignPoint.SignData.class.getDeclaredField("demand");
@@ -83,8 +87,6 @@ public class TramwaysCompat {
                     } else {
 
 
-                        TramSignDataAccessor accessor = (TramSignDataAccessor) signD;
-
                         demand = accessor.getDemand();
                         if (demand == null) continue;
 
@@ -96,10 +98,24 @@ public class TramwaysCompat {
                         cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(), signSpeedLimit));
                         if (demand instanceof TemporarySpeedSignDemand) {
                             LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-1).getSpeedLimit();
-                        }}
-                    if (demand instanceof TemporaryEndSignDemand) {
+                        }
+                    first= false;}
+                    if (demand instanceof TemporaryEndSignDemand && !first) {
                         cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(), LastLimit));}
-
+                    else if (demand instanceof TemporarySpeedSignDemand && first) {
+                        ISpeedLimitableTrain Ttrain = (ISpeedLimitableTrain) train;
+                        double tempSpeedLimit = 300.0;
+                        try {
+                            java.lang.reflect.Field tempSPeedLimitField = ISpeedLimitableTrain.class.getDeclaredField("tempSpeedLimit$actual");
+                            tempSPeedLimitField.setAccessible(true);
+                            tempSpeedLimit = (double) tempSPeedLimitField.get(Ttrain);
+                        }
+                        catch (Exception e) {
+                            RealismMod.LOGGER.error("Error accessing tempSpeedLimit field: " + e.getMessage());
+                        }
+                        cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(),tempSpeedLimit));
+                    }
+                    first = false;
                 }
             }
         } catch (Exception e) {
@@ -143,7 +159,7 @@ public class TramwaysCompat {
     private static class TramwaysCompatImpl {
         static Object createTramSignInfo(UUID signId, double distance, Object signType, boolean primary) {
             return new net.Realism.trains.SignalFinder.TramSignInfo(
-                    signId, distance, (purplecreate.tramways.content.signs.TramSignPoint)signType, primary);
+                    signId, distance, signType, primary);
         }
 
         static boolean isTramSignPoint(Object obj) {
