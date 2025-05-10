@@ -4,6 +4,12 @@
     "sounds": [
       "realism:info"
     ]
+  },
+  "warning":{
+    "subtitle": "warning",
+    "sounds": [
+      "realism:warning"
+    ]
   }
 
 

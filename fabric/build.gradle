@@ -68,8 +68,8 @@ dependencies {
         case "disabled": break
         default: println("Unknown recipe viewer specified: $fabric_recipe_viewer. Must be JEI, REI, EMI, or disabled.")
     }
-    modCompileOnly("purplecreate.tramways:tramways-fabric:$tramways_version-fabric-1")
-    modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-fabric-1")
+    modCompileOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric-1")
+    modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric-1")
     // if you would like to add integration with them, uncomment them here.
 //    modCompileOnly("mezz.jei:jei-$minecraft_version-fabric:$jei_version")
 //    modCompileOnly("mezz.jei:jei-$minecraft_version-common:$jei_version")
@@ -89,7 +89,10 @@ processResources {
             "fabric_loader_version": fabric_loader_version,
             "fabric_api_version": fabric_api_version,
             "minecraft_version": minecraft_version,
-            "create_version": create_fabric_version // on fabric, use the entire version, unlike forge
+            "create_version": create_fabric_version,
+            "tramways_version": tramways_version,
+            "architectury_api_version": architectury_api_version
+
     ]
     inputs.properties(properties)
 

@@ -30,6 +30,7 @@ public class RealismConfig {
         public final ForgeConfigSpec.BooleanValue debugMode;
         public final ForgeConfigSpec.BooleanValue ETCSEnable;
         public final ForgeConfigSpec.DoubleValue ETCSSize;
+        public final ForgeConfigSpec.BooleanValue ETCSSounds;
 
 
         Client(ForgeConfigSpec.Builder builder) {
@@ -39,6 +40,8 @@ public class RealismConfig {
                     .define("ETCS Enable", true);
             ETCSSize = builder.comment("Size of the ETCS display")
                     .defineInRange("ETCS Size", 0.25, 0.1, 2);
+            ETCSSounds = builder.comment("Enable ETCS sounds")
+                    .define("ETCS Sounds", true);
             builder.pop();
             debugMode = builder.comment("Enable debug mode to see the modified acceleration")
                     .define("debugMode", false);

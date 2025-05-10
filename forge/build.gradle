@@ -45,8 +45,8 @@ dependencies {
 
     // if you would like to add integration with JEI, uncomment this line.
     //    modCompileOnly("mezz.jei:jei-$minecraft_version:$jei_version:api")
-    modCompileOnly("purplecreate.tramways:tramways-forge:$tramways_version-forge-1")
-    modRuntimeOnly("purplecreate.tramways:tramways-forge:$tramways_version-forge-1")
+    modCompileOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge-1")
+    modRuntimeOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge-1")
 
     // Add this for MixinExtras
     implementation "io.github.llamalad7:mixinextras-forge:0.3.5"
@@ -59,7 +59,9 @@ processResources {
             "version": version,
             "forge_version": forge_version.split("\\.")[0], // only specify major version of forge
             "minecraft_version": minecraft_version,
-            "create_version": create_forge_version.split("-")[0] // cut off build number
+            "create_version": create_forge_version.split("-")[0],
+            "tramways_version": tramways_version,
+            "architectury_api_version": architectury_api_version// cut off build number
     ]
     inputs.properties(properties)
 

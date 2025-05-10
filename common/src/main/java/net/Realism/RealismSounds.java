@@ -12,6 +12,7 @@ public class RealismSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(MOD_ID, Registries.SOUND_EVENT);
 
     public static final RegistrySupplier<SoundEvent> ETCS_BEEP = registerSoundEvents("info");
+    public static final RegistrySupplier<SoundEvent> ETCS_WARNING = registerSoundEvents("warning");
 
 
     private static RegistrySupplier<SoundEvent> registerSoundEvents(String name) {
