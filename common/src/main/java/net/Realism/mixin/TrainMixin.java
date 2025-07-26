@@ -4,6 +4,7 @@ import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.graph.DimensionPalette;
 import com.simibubi.create.content.trains.graph.TrackGraph;
+import com.simibubi.create.content.trains.schedule.ScheduleRuntime;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.trains.etcs.ETCS;
@@ -32,6 +33,7 @@ public abstract class TrainMixin implements ITrainInterface {
     @Shadow
     public List<Carriage> carriages;
 
+    @Shadow public ScheduleRuntime runtime;
     @Unique
     public ETCS realism$etcs = null;
 
@@ -49,7 +51,8 @@ public abstract class TrainMixin implements ITrainInterface {
         if (this.realism$etcs == null) {
             this.realism$setETCS(new ETCS((Train)(Object)this));
         }
-        this.realism$etcs.update();
+        if(this.runtime.paused){
+        this.realism$etcs.update();}
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
     private void write(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
