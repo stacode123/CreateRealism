@@ -2,6 +2,7 @@ package net.Realism.compat;
 
 import com.simibubi.create.content.trains.entity.Train;
 import net.Realism.Interfaces.ITramSignPoint;
+import net.Realism.RealismExpectPlatform;
 import net.Realism.RealismMod;
 import net.Realism.mixinaccesors.TramSignDataAccessor;
 import net.Realism.trains.SignalFinder;
@@ -17,16 +18,8 @@ import purplecreate.tramways.mixinInterfaces.ISpeedLimitableTrain;
 import java.util.*;
 
 public class TramwaysCompat {
-    private static boolean tramwaysLoaded;
+    private static final boolean tramwaysLoaded = RealismExpectPlatform.isModLoaded("tramways");
 
-    static {
-        try {
-            Class.forName("purplecreate.tramways.content.signs.TramSignPoint");
-            tramwaysLoaded = true;
-        } catch (ClassNotFoundException e) {
-            tramwaysLoaded = false;
-        }
-    }
 
     public static List<ETCS.SpeedLimit> processTramSigns(SignalFinder.SignalScanResult s, double Mspeed, Train train) {
 
@@ -97,7 +90,7 @@ public class TramwaysCompat {
                         signSpeedLimit = (signSpeedLimit / 100) * maxSpeed;
                         cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(), signSpeedLimit));
                         if (demand instanceof TemporarySpeedSignDemand) {
-                            LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-1).getSpeedLimit();
+                            LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-1).speedLimit();
                         }
                     first= false;}
                     if (demand instanceof TemporaryEndSignDemand && !first) {

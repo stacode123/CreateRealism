@@ -98,8 +98,8 @@ public class ETCSSyncPacket implements S2CPacket {
         buffer.writeInt(speedLimits.size());
         buffer.writeBoolean(toUpdate);
         for (SpeedLimit limit : speedLimits) {
-            buffer.writeDouble(limit.getDistance());
-            buffer.writeDouble(limit.getSpeedLimit());
+            buffer.writeDouble(limit.distance());
+            buffer.writeDouble(limit.speedLimit());
         }
     }
 
@@ -109,8 +109,7 @@ public class ETCSSyncPacket implements S2CPacket {
         mc.execute(() -> {
             try {
                 // Get the train from the client-side train registry
-                if (CreateClient.RAILWAYS.trains.get(trainId) != null && CreateClient.RAILWAYS.trains.get(trainId) instanceof ITrainInterface) {
-                    ITrainInterface trainInterface = (ITrainInterface) CreateClient.RAILWAYS.trains.get(trainId);
+                if (CreateClient.RAILWAYS.trains.get(trainId) != null && CreateClient.RAILWAYS.trains.get(trainId) instanceof ITrainInterface trainInterface) {
                     if (trainInterface.realism$getETCS() == null) {
                         trainInterface.realism$setETCS(new ETCS(CreateClient.RAILWAYS.trains.get(trainId)));
                     }

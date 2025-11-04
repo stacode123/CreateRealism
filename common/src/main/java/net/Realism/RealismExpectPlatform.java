@@ -13,4 +13,9 @@ public class RealismExpectPlatform {
     public static boolean isForge() {
         throw new AssertionError();
     }
+
+    @ExpectPlatform
+    public static boolean isModLoaded(String id) {
+        throw new AssertionError();
+    }
 }

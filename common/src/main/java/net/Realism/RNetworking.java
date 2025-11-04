@@ -29,35 +29,30 @@ public class RNetworking {
     private static final Map<Integer, Function<FriendlyByteBuf, ? extends C2SPacket>> c2sReaders = new HashMap<>();
     private static final Map<Integer, Function<FriendlyByteBuf, ? extends S2CPacket>> s2cReaders = new HashMap<>();
 
-    private static class CheckVersionS2CPacket implements S2CPacket {
-        private final String serverVersion;
-
-        public CheckVersionS2CPacket(String serverVersion) {
-            this.serverVersion = serverVersion;
-        }
+    private record CheckVersionS2CPacket(String serverVersion) implements S2CPacket {
 
         public static CheckVersionS2CPacket read(FriendlyByteBuf buf) {
-            return new CheckVersionS2CPacket(buf.readUtf());
-        }
+                return new CheckVersionS2CPacket(buf.readUtf());
+            }
 
-        @Override
-        public void write(FriendlyByteBuf buf) {
-            buf.writeUtf(serverVersion);
-        }
+            @Override
+            public void write(FriendlyByteBuf buf) {
+                buf.writeUtf(serverVersion);
+            }
 
-        @Override
-        public void handle(Minecraft mc) {
-            if (RNetworking.VERSION.equals(serverVersion))
-                return;
+            @Override
+            public void handle(Minecraft mc) {
+                if (RNetworking.VERSION.equals(serverVersion))
+                    return;
 
-            mc.getConnection().onDisconnect(
-                    Component.literal(
-                            "Create: Tramways network versions do not match! Server expected %s, client has %s"
-                                    .formatted(serverVersion, RNetworking.VERSION)
-                    )
-            );
+                mc.getConnection().onDisconnect(
+                        Component.literal(
+                                "Create: Tramways network versions do not match! Server expected %s, client has %s"
+                                        .formatted(serverVersion, RNetworking.VERSION)
+                        )
+                );
+            }
         }
-    }
 
     private static <T extends S2CPacket> void registerS2C(
             Class<T> clazz,

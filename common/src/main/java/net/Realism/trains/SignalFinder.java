@@ -86,7 +86,7 @@ public class SignalFinder {
         }
 
         // Travel along the track
-        scout.travel(train.graph, maxDistance,
+         double distanceTraveled = scout.travel(train.graph, maxDistance,
                 scout.steer(steerDirection, new Vec3(0, 1, 0)), // Always go straight
                 (distance, couple) -> {
                     // Process signal points
@@ -153,6 +153,11 @@ public class SignalFinder {
                 (distance, edge) -> {
                     // Process junctions (no special handling needed - going straight)
                 });
+        double actualMaxDistance = Math.abs(maxDistance);
+        if (Math.abs(distanceTraveled) < actualMaxDistance - 0.1){
+            // Track ended before maxDistance - add artificial red signal at track end
+            result.endOfTrack(Math.abs(distanceTraveled));
+        }
 
         return result;
     }
@@ -202,8 +207,8 @@ public class SignalFinder {
 
         public SignalInfo getClosestOccupiedSignal() {
             return signals.stream()
-                    .filter(SignalInfo::isOccupied)
-                    .min(Comparator.comparing(SignalInfo::getDistance))
+                    .filter(SignalInfo::occupied)
+                    .min(Comparator.comparing(SignalInfo::distance))
                     .orElse(null);
         }
 
@@ -213,51 +218,16 @@ public class SignalFinder {
 
         public double getDistanceToClosestOccupiedSignal() {
             SignalInfo signal = getClosestOccupiedSignal();
-            return signal != null ? signal.getDistance() : Double.MAX_VALUE;
+            return signal != null ? signal.distance() : Double.MAX_VALUE;
+        }
+
+        public void endOfTrack(double distance) {
+            signals.add(new SignalInfo(null, null, distance, true, true, false));
         }
     }
 
-    public static class SignalInfo {
-        private final UUID signalId;
-        private final UUID groupId;
-        private final double distance;
-        private final boolean primary;
-        private final boolean occupied;
-        private final boolean isCrossSignal;
-
-        public SignalInfo(UUID signalId, UUID groupId, double distance, boolean primary,
-                          boolean occupied, boolean isCrossSignal) {
-            this.signalId = signalId;
-            this.groupId = groupId;
-            this.distance = distance;
-            this.primary = primary;
-            this.occupied = occupied;
-            this.isCrossSignal = isCrossSignal;
-        }
-
-        public UUID getSignalId() {
-            return signalId;
-        }
-
-        public UUID getGroupId() {
-            return groupId;
-        }
-
-        public double getDistance() {
-            return distance;
-        }
-
-        public boolean isPrimary() {
-            return primary;
-        }
-
-        public boolean isOccupied() {
-            return occupied;
-        }
-
-        public boolean isCrossSignal() {
-            return isCrossSignal;
-        }
+    public record SignalInfo(UUID signalId, UUID groupId, double distance, boolean primary, boolean occupied,
+                             boolean isCrossSignal) {
     }
 
     public static class TramSignInfo {
