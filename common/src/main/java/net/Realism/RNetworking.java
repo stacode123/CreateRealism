@@ -1,20 +1,19 @@
 package net.Realism;
 
-import com.simibubi.create.foundation.utility.Components;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import io.netty.buffer.Unpooled;
+import net.Realism.network.ETCSStartStopPacket;
 import net.Realism.network.ETCSSyncPacket;
 import net.Realism.network.SteerDirectionPacket;
+import net.Realism.util.C2SPacket;
+import net.Realism.util.S2CPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-
-
-import net.Realism.util.C2SPacket;
-import net.Realism.util.S2CPacket;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +51,7 @@ public class RNetworking {
                 return;
 
             mc.getConnection().onDisconnect(
-                    Components.literal(
+                    Component.literal(
                             "Create: Tramways network versions do not match! Server expected %s, client has %s"
                                     .formatted(serverVersion, RNetworking.VERSION)
                     )
@@ -145,6 +144,11 @@ public class RNetworking {
         registerC2S(
                 SteerDirectionPacket.class
                 , SteerDirectionPacket::read
+        );
+        registerC2S(
+                ETCSStartStopPacket.class,
+                ETCSStartStopPacket::read
+
         );
 
     }

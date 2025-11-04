@@ -1,12 +1,12 @@
 package net.Realism.compat;
 
 import com.simibubi.create.content.trains.entity.Train;
-import com.simibubi.create.foundation.utility.Couple;
 import net.Realism.Interfaces.ITramSignPoint;
 import net.Realism.RealismMod;
 import net.Realism.mixinaccesors.TramSignDataAccessor;
 import net.Realism.trains.SignalFinder;
 import net.Realism.trains.etcs.ETCS;
+import net.createmod.catnip.data.Couple;
 import net.minecraft.nbt.CompoundTag;
 import purplecreate.tramways.content.signs.TramSignPoint;
 import purplecreate.tramways.content.signs.demands.SignDemand;

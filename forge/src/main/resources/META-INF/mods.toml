@@ -30,7 +30,7 @@ side = "BOTH"
 [[dependencies.realism]]
 modId="create"
 mandatory=true
-versionRange="${create_version}"
+versionRange="${create_version},)"
 ordering="NONE"
 side="BOTH"
 

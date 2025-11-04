@@ -9,25 +9,30 @@ import com.simibubi.create.content.trains.entity.Train;
 import net.Realism.RNetworking;
 import net.Realism.compat.TramwaysCompat;
 import net.Realism.config.RealismConfig;
+import net.Realism.network.ETCSStartStopPacket;
 import net.Realism.network.ETCSSyncPacket;
 import net.Realism.network.SteerDirectionPacket;
 import net.Realism.trains.SignalFinder;
+import net.Realism.trains.SignalFinder.SignalScanResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.Realism.trains.SignalFinder.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static net.Realism.compat.isModLoaded.isTramwaysLoaded;
 import static net.Realism.network.SteerDirectionPacket.KeyPressType.*;
 import static net.Realism.trains.etcs.ETCSsounds.*;
-import static net.Realism.trains.etcs.ETCStools.*;
+import static net.Realism.trains.etcs.ETCStools.optimizedRenderSpeedCurve;
+import static net.Realism.trains.etcs.ETCStools.renderElement;
 
 
 public class ETCS {
@@ -71,6 +76,8 @@ public class ETCS {
     public ETCS(Train train) {
         this.train = train;
     }
+
+    public boolean toUpdate = false;
 
     /**
      * Update method to be called during game logic/tick updates.
@@ -155,7 +162,15 @@ public class ETCS {
         syncToClients();
     }
 
+    public void start(){
+        toUpdate = true;
+        RNetworking.sendToServer(new ETCSStartStopPacket(toUpdate,train.id));
+    }
 
+    public void stop(){
+        toUpdate = false;
+        RNetworking.sendToServer(new ETCSStartStopPacket(toUpdate,train.id));
+    }
     /**
      * Render method to be called during render cycle.
      * Only contains rendering code, using data calculated in update().
@@ -681,7 +696,8 @@ public class ETCS {
                 cachedSpeedLimits,
                 zoom,
                 pendingBeepSound,
-                distanceToBrakingPoint
+                distanceToBrakingPoint,
+                toUpdate
         );
 
         // Send to all players
@@ -693,7 +709,7 @@ public class ETCS {
     public void updateFromNetwork(double distanceToSignal, double speedLimit, float needleRotation, boolean backward,
                                   double emergencyBrakingDist, double serviceBrakingDist, double warningBrakingDist,
                                   boolean curveIsDropping, List<SpeedLimit> speedLimits, int zoom,
-                                  boolean newRouteSound, double distanceToBrakingPoint) {
+                                  boolean newRouteSound, double distanceToBrakingPoint, boolean toUpdate) {
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
         this.needleRotationDegrees = needleRotation;
@@ -714,6 +730,7 @@ public class ETCS {
         this.lastUpdateTime = System.currentTimeMillis();
         // Clear the sync flag since we just received fresh data
         this.needsSync = false;
+        this.toUpdate = toUpdate;
     }
 
     /**

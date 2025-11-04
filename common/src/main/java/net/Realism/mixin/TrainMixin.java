@@ -2,18 +2,19 @@ package net.Realism.mixin;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
+import com.simibubi.create.content.trains.entity.TrainStatus;
 import com.simibubi.create.content.trains.graph.DimensionPalette;
 import com.simibubi.create.content.trains.graph.TrackGraph;
 import com.simibubi.create.content.trains.schedule.ScheduleRuntime;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.config.RealismConfig;
+import net.Realism.debug.RealismDebuger;
 import net.Realism.trains.etcs.ETCS;
 import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import net.Realism.config.RealismConfig;
-import net.Realism.debug.RealismDebuger;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -34,6 +35,8 @@ public abstract class TrainMixin implements ITrainInterface {
     public List<Carriage> carriages;
 
     @Shadow public ScheduleRuntime runtime;
+    @Shadow public TrainStatus status;
+    @Shadow public boolean manualTick;
     @Unique
     public ETCS realism$etcs = null;
 
@@ -51,8 +54,9 @@ public abstract class TrainMixin implements ITrainInterface {
         if (this.realism$etcs == null) {
             this.realism$setETCS(new ETCS((Train)(Object)this));
         }
-        if(this.runtime.paused){
-        this.realism$etcs.update();}
+        if(this.realism$etcs.toUpdate){
+        this.realism$etcs.update();
+        }
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
     private void write(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
@@ -76,7 +80,7 @@ public abstract class TrainMixin implements ITrainInterface {
 
     /**
      * @author Stacode
-     * @reason Change the acceleration to change depending on the amount of carriages and locomotives
+     * @reason Change the acceleration to change depending on the number of carriages and locomotives
      */
 
     @Overwrite()

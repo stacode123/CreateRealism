@@ -6,11 +6,11 @@
   "client": [
   ],
   "mixins": [
+    "AbstractContraptionEntityMixin",
     "BezierConnectionMixin",
-    "TrackPlacementMixin",
-    "TrainMixin",
     "CarriageContraptionEntityMixin",
-
+    "TrackPlacementMixin",
+    "TrainMixin"
   ],
   "injectors": {
     "defaultRequire": 1

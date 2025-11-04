@@ -7,11 +7,7 @@ import net.Realism.trains.etcs.ETCS;
 import net.Realism.trains.etcs.ETCS.SpeedLimit;
 import net.Realism.util.S2CPacket;
 import net.minecraft.client.Minecraft;
-
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.level.Level;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,11 +27,12 @@ public class ETCSSyncPacket implements S2CPacket {
     private final int zoom;
     private final boolean newRoute;
     private final double distanceToBrakingPoint;
+    private final boolean toUpdate;
 
     public ETCSSyncPacket(UUID trainId, double distanceToSignal, double speedLimit, float needleRotation,
                          boolean backward, double emergencyBrakingDist, double serviceBrakingDist,
                          double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits,
-                         int zoom, boolean newRoute, double distanceToBrakingPoint) {
+                         int zoom, boolean newRoute, double distanceToBrakingPoint, boolean toUpdate) {
         this.trainId = trainId;
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
@@ -49,6 +46,7 @@ public class ETCSSyncPacket implements S2CPacket {
         this.zoom = zoom;
         this.newRoute = newRoute;
         this.distanceToBrakingPoint = distanceToBrakingPoint;
+        this.toUpdate = toUpdate;
     }
 
     public static ETCSSyncPacket read(FriendlyByteBuf buffer) {
@@ -66,6 +64,7 @@ public class ETCSSyncPacket implements S2CPacket {
         boolean newRoute = buffer.readBoolean();
         double distanceToBrakingPoint = buffer.readDouble();
         int speedLimitCount = buffer.readInt();
+        boolean toUpdate = buffer.readBoolean();
         List<SpeedLimit> speedLimits = new ArrayList<>();
         for (int i = 0; i < speedLimitCount; i++) {
             double distance = buffer.readDouble();
@@ -75,7 +74,7 @@ public class ETCSSyncPacket implements S2CPacket {
 
         return new ETCSSyncPacket(trainId, distanceToSignal, speedLimit, needleRotation, backward,
                 emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,
-                speedLimits, zoom, newRoute, distanceToBrakingPoint);
+                speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate);
     }
 
 
@@ -97,6 +96,7 @@ public class ETCSSyncPacket implements S2CPacket {
         buffer.writeDouble(distanceToBrakingPoint);
         // Write speed limits
         buffer.writeInt(speedLimits.size());
+        buffer.writeBoolean(toUpdate);
         for (SpeedLimit limit : speedLimits) {
             buffer.writeDouble(limit.getDistance());
             buffer.writeDouble(limit.getSpeedLimit());
@@ -118,7 +118,7 @@ public class ETCSSyncPacket implements S2CPacket {
                     trainInterface.realism$getETCS().updateFromNetwork(
                             distanceToSignal, speedLimit, needleRotation, backward,
                             emergencyBrakingDist, serviceBrakingDist, warningBrakingDist,
-                            cachedCurveIsDropping, speedLimits, zoom, newRoute, distanceToBrakingPoint
+                            cachedCurveIsDropping, speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate
                     );
                 }
             } catch (Exception e) {

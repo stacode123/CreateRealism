@@ -2,8 +2,8 @@ package net.Realism.mixin;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
-import net.Realism.trains.etcs.ETCS;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.trains.etcs.ETCS;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,8 +24,12 @@ public class CarriageContraptionEntityMixin {
                 if (RTrain.realism$getETCS() == null) {
                     RTrain.realism$setETCS(new ETCS(carriage.train));
                 }
+                RTrain.realism$getETCS().start();
                 RTrain.realism$getETCS().previousSignalScanResult = null;
             }
         }
     }
+
+
+
 }

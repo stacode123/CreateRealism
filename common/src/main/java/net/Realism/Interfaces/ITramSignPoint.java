@@ -1,6 +1,6 @@
 package net.Realism.Interfaces;
 
-import com.simibubi.create.foundation.utility.Couple;
+import net.createmod.catnip.data.Couple;
 import purplecreate.tramways.content.signs.TramSignPoint;
 
 import java.util.Set;

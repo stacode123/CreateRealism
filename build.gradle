@@ -1,34 +1,63 @@
 plugins {
-    id "architectury-plugin" version "3.4.+"
-    id "dev.architectury.loom" version "1.7.+" apply false
+    id "architectury-plugin" version "3.4-SNAPSHOT"
+    id "dev.architectury.loom" version "1.7-SNAPSHOT" apply false
+    id "io.github.p03w.machete" version "1.+" // automatic jar compressing on build
+    id "me.modmuss50.mod-publish-plugin" version "0.7.4" apply false
+    id 'java'
 }
 
+
 architectury {
-    minecraft = minecraft_version
+    minecraft = rootProject.minecraft_version
 }
 
 subprojects {
     apply plugin: "dev.architectury.loom"
+    apply plugin: "me.modmuss50.mod-publish-plugin"
+    apply plugin: "maven-publish"
 
     loom {
         silentMojangMappingsLicense()
     }
 
     repositories {
-        maven { url = "https://maven.parchmentmc.org" } // Parchment mappings
-
-        // mavens used on both forge and fabric
+        mavenCentral()
+        maven { url = "https://maven.shedaniel.me/" } // Cloth Config, REI
         maven { url = "https://maven.blamejared.com/" } // JEI
-        maven { url = "https://maven.tterrag.com/" } // Flywheel on both, Create and Registrate on forge
-        maven { url = "https://purplecreate.github.io/maven/"}
+        maven { url = "https://maven.parchmentmc.org" } // Parchment mappings
+        maven { url = "https://maven.quiltmc.org/repository/release" } // Quilt Mappings
+        maven { // Flywheel
+            url = "https://maven.tterrag.com/"
+            content {
+                // need to be specific here due to version overlaps
+                includeGroup("com.jozufozu.flywheel")
+            }
+        }
     }
 
     dependencies {
-        minecraft "com.mojang:minecraft:$minecraft_version"
-        // Can't use parchment for some reason, game ends up completely unmapped
-        mappings loom.officialMojangMappings()
+        minecraft "com.mojang:minecraft:${minecraft_version}"
+        // layered mappings - Mojmap names, parchment and QM docs and parameters
+        mappings(loom.layered {
+            it.officialMojangMappings()
+            it.parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_version}@zip")
+        })
+    }
 
-        // see each subproject for more dependencies.
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = rootProject.mod_id + "-" + project.name
+                from components.java
+            }
+        }
+
+        repositories {
+            maven {
+                name = "Github"
+                url = ""
+            }
+        }
     }
 }
 
@@ -37,22 +66,62 @@ allprojects {
     apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
-    base.archivesName = archives_base_name
-    group = maven_group
+    archivesBaseName = rootProject.mod_id
+    group = rootProject.mod_group_id
 
-    // Formats the mod version to include the loader, Minecraft version, and build number (if present)
-    // example: 1.0.0+fabric-1.18.2-build.100
     String buildNumber = System.getenv("GITHUB_RUN_NUMBER")
-    version = "$mod_version+$project.name-$minecraft_version" + (buildNumber != null ? "-build.$buildNumber" : "")
+    version = "${mod_version}-mc${minecraft_version}-${project.name}" + (buildNumber != null ? "-${buildNumber}" : "")
 
-    tasks.withType(JavaCompile).configureEach {
+    repositories {
+        maven { url = "https://maven.createmod.net/" }
+        maven { url = "https://maven.tterrag.com" }
+        maven { url = "https://mvn.devos.one/snapshots/" }
+        maven { url = "https://mvn.devos.one/releases/" }
+        maven { url = "https://api.modrinth.com/maven" }
+        maven { url = "https://jitpack.io/" }
+        maven { url = "https://maven.jamieswhiteshirt.com/libs-release" }
+        maven { url = "https://maven.terraformersmc.com/releases/" }
+        maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
+        maven { url = "https://purplecreate.github.io/maven/"}
+
+    }
+
+    tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
     }
 
     java {
         withSourcesJar()
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+            sourceCompatibility = JavaVersion.VERSION_17
+            targetCompatibility = JavaVersion.VERSION_17
+    }
 
+    machete {
+        // disable machete locally for faster builds
+        enabled = buildNumber != null
+    }
+}
+
+tasks.create("publishRealism") {
+    var platform = System.getenv("PLATFORM")
+
+    switch (platform) {
+        case "all":
+            dependsOn tasks.build, ":fabric:publishMods", ":forge:publishMods"
+            break
+        case "fabric":
+        case "forge":
+            dependsOn "${platform}:build", "${platform}:publishMods"
+            break
+    }
+}
+
+tasks.register('javadocAll', Javadoc) {
+    source subprojects.collect { project -> project.sourceSets.main.allJava }
+    classpath = files(subprojects.collect { project -> project.sourceSets.main.compileClasspath })
+    destinationDir = rootProject.file("docs")
+
+    options {
+        encoding = "UTF-8"
     }
 }

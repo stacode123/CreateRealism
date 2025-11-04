@@ -6,48 +6,21 @@ loom {
     accessWidenerPath = file("src/main/resources/realism.accesswidener")
 }
 
-repositories {
-    // mavens for Create Fabric and dependencies
-    maven { url = "https://mvn.devos.one/releases" } // Porting Lib releases
-    maven { url = "https://mvn.devos.one/snapshots" } // Create and several dependencies
-    maven { url = "https://maven.jamieswhiteshirt.com/libs-release" } // Reach Entity Attributes
-    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven" } // Forge Config API Port
+dependencies {
+    modImplementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
+    modCompileOnly("com.simibubi.create:create-fabric-${minecraft_version}:${create_fabric_version}")
 
-    maven { // Fabric ASM for Porting Lib
-        url = "https://jitpack.io/"
-        content { includeGroupAndSubgroups("com.github") }
-    }
+    modImplementation "dev.architectury:architectury:$rootProject.architectury_api_version"
+    implementation("javazoom:jlayer:${jlayer_version}")
 
-    maven { url = "https://maven.shedaniel.me" } // Cloth Config, REI
-    maven { url = "https://maven.blamejared.com" } // JEI
-
-    maven { url = "https://api.modrinth.com/maven" } // LazyDFU
-    maven { url = "https://maven.terraformersmc.com/releases" } // Mod Menu, EMI
-    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
-
+    annotationProcessor(implementation("io.github.llamalad7:mixinextras-common:${mixin_extras_version}"))
+    modCompileOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common")
+    modRuntimeOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common")
 
 }
 
-dependencies {
-    // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
-    // Do NOT use other classes from fabric loader
-    modImplementation("net.fabricmc:fabric-loader:$fabric_loader_version")
-    // Compile against Create Fabric in common
-    // beware of differences across platforms!
-    // dependencies must also be pulled in (transitively) for all classes to be remapped properly.
-    // All dependencies except Flywheel and Registrate are NOT safe to use!
-    // Flywheel and Registrate must also be used carefully due to differences across loaders.
-    modCompileOnly("com.simibubi.create:create-fabric-$minecraft_version:$create_fabric_version")
-
-    // ForgeConfigAPIPort dependency for configs
-    modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:8.0.2")
-    modCompileOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common-1")
-    modRuntimeOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common-1")
-    // Add this for MixinExtras
-    implementation "io.github.llamalad7:mixinextras-common:0.3.5"
-    annotationProcessor "io.github.llamalad7:mixinextras-common:0.3.5"
-    modImplementation "dev.architectury:architectury:$rootProject.architectury_api_version"
-
-
-
+sourceSets {
+    main {
+        resources.srcDir file("src/resources")
+    }
 }
