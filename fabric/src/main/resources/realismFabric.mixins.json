@@ -6,6 +6,7 @@
   "client": [
   ],
   "mixins": [
+    "AbstractContraptionEntityMixin",
     "TrackPlacementOverlayMixin",
     "TrainHudMixin"
   ],

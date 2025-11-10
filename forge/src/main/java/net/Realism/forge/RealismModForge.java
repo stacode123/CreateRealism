@@ -1,9 +1,9 @@
 package net.Realism.forge;
 
+import dev.architectury.platform.forge.EventBuses;
 import net.Realism.RealismBlocks;
 import net.Realism.RealismMod;
 import net.Realism.forge.config.ForgeConfigRegistration;
-import dev.architectury.platform.forge.EventBuses;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -27,5 +27,6 @@ public class RealismModForge {
         });
 
     }
+
 
 }

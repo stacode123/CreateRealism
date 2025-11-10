@@ -7,7 +7,6 @@
     "client.OrientedContraptionEntityRenderMixin"
   ],
   "mixins": [
-    "AbstractContraptionEntityMixin",
     "BezierConnectionMixin",
     "CarriageContraptionEntityMixin",
     "CarriageDimensionalEntityMixin",

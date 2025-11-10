@@ -1,14 +1,15 @@
 package net.Realism.debug;
 
-import net.minecraft.client.Minecraft;
 import net.Realism.config.RealismConfig;
+import net.minecraft.client.Minecraft;
+
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.HashSet;
-import java.util.Set;
 
 public class RealismDebuger {
     private static final RealismDebuger INSTANCE = new RealismDebuger();
@@ -30,7 +31,7 @@ public class RealismDebuger {
     public void startLogging() {
         if (!isRunning) {
             isRunning = true;
-            scheduler.scheduleAtFixedRate(this::logDebugInfo, 0, 5, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(this::logDebugInfo, 0, 1, TimeUnit.SECONDS);
         }
     }
 
@@ -41,7 +42,7 @@ public class RealismDebuger {
         }
     }
 
-    public void addDebugInfo(float acceleration, int carriageCount, int locomotiveCount) {
+    public void addAccelerationDebugInfo(float acceleration, int carriageCount, int locomotiveCount) {
         // Only collect debug info if debug mode is enabled
         if (RealismConfig.CLIENT.debugMode.get()) {
             String message = String.format("Train acceleration: %.5f | Carriages: %d | PowerCars: %d",
@@ -61,6 +62,20 @@ public class RealismDebuger {
                         knownMessages.clear();
                         knownMessages.addAll(pendingMessages);
                     }
+                }
+            }
+        }
+    }
+
+    public void addDebugMessage(String message) {
+        // Only collect debug info if debug mode is enabled
+        if (RealismConfig.CLIENT.debugMode.get()) {
+            synchronized (pendingMessages) {
+                if (!knownMessages.contains(message)) {
+                    // This is a new message we haven't seen before
+                    pendingMessages.offer(message);
+                    knownMessages.add(message);
+                    hasNewData = true;
                 }
             }
         }

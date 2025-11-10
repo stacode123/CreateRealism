@@ -6,6 +6,7 @@ import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
 import com.simibubi.create.content.trains.graph.TrackEdge;
 import com.simibubi.create.content.trains.track.BezierConnection;
+import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
 import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
@@ -120,11 +121,6 @@ public class CarriageDimensionalEntityMixin {
         Vec3 worldUp = new Vec3(0, 1, 0);
         Vec3 right = forward.cross(worldUp).normalize();
 
-        // If right vector is too small, we're going straight up/down - no banking
-        if (right.lengthSqr() < 0.001) {
-            return 0f;
-        }
-
         // Project track normal onto right vector to get banking
         double bankingDot = trackNormal.dot(right);
         bankingDot = Mth.clamp(bankingDot, -1.0, 1.0);
@@ -132,18 +128,29 @@ public class CarriageDimensionalEntityMixin {
 
         // Apply intensity multiplier
         float intensity = RealismConfig.CLIENT.bankingIntensity.get().floatValue();
+        bankingAngle *= 0.02f;
         bankingAngle *= intensity;
 
-        // Apply speed-based scaling
-        double speed = Math.abs(this$0.train.speed);
+        double speed = this$0.train.speed*20*3.6f;
         float minSpeed = RealismConfig.CLIENT.bankingMinSpeed.get().floatValue();
-        float speedFactor = minSpeed > 0 ? (float) Mth.clamp(speed / minSpeed, 0, 1) : 1f;
+        float maxSpeed = AllConfigs.server().trains.trainTopSpeed.getF();
+        float speedFactor;
+        if (speed <= minSpeed) {
+            speedFactor = 0f;
+        } else if (speed >= maxSpeed) {
+            speedFactor = 1f;
+        } else {
+            float range = maxSpeed - minSpeed;
+            if (range <= 0f) {
+                speedFactor = 1f;
+            } else {
+                speedFactor = (float) ((speed - minSpeed) / range);
+                speedFactor = Mth.clamp(speedFactor, 0f, 1f);
+            }
+        }
+
 
         float targetBanking = bankingAngle * speedFactor;
-
-        // Apply smoothing to prevent jarring transitions
-        float currentRoll = ((IOrientedContraptionEntity) entity).realism$getRoll();
-        float smoothness = RealismConfig.CLIENT.bankingSmoothness.get().floatValue();
 
         // Clamp to maximum banking angle
         float maxAngle = RealismConfig.CLIENT.maxBankingAngle.get().floatValue();

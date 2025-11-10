@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import dev.engine_room.flywheel.lib.transform.TransformStack;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
+import net.Realism.debug.RealismDebuger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -31,6 +32,8 @@ public abstract class OrientedContraptionEntityRenderMixin {
             // This is applied after all other transformations in the method
             TransformStack.of(matrixStack).rotateX((float) Math.toRadians(angleRoll));
         }
+        String debug = String.format("Roll angle: %.2f", angleRoll);
+        RealismDebuger.getInstance().addDebugMessage(debug);
     }
 }
 

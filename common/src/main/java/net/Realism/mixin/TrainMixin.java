@@ -103,7 +103,7 @@ public abstract class TrainMixin implements ITrainInterface {
 
         if(RealismConfig.CLIENT.debugMode.get()) {
             // Send data to the debug logger instead of printing directly
-            RealismDebuger.getInstance().addDebugInfo(ac*400, carriages.size(), locomotives );
+            RealismDebuger.getInstance().addAccelerationDebugInfo(ac*400, carriages.size(), locomotives );
         }
 
         return ac;
