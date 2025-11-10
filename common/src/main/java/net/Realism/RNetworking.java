@@ -4,6 +4,7 @@ import dev.architectury.injectables.annotations.ExpectPlatform;
 import io.netty.buffer.Unpooled;
 import net.Realism.network.ETCSStartStopPacket;
 import net.Realism.network.ETCSSyncPacket;
+import net.Realism.network.RollSyncPacket;
 import net.Realism.network.SteerDirectionPacket;
 import net.Realism.util.C2SPacket;
 import net.Realism.util.S2CPacket;
@@ -144,6 +145,10 @@ public class RNetworking {
                 ETCSStartStopPacket.class,
                 ETCSStartStopPacket::read
 
+        );
+        registerS2C(
+                RollSyncPacket.class,
+                RollSyncPacket::read
         );
 
     }

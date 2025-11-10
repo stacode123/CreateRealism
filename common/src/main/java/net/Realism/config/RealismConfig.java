@@ -32,6 +32,12 @@ public class RealismConfig {
         public final ForgeConfigSpec.DoubleValue ETCSSize;
         public final ForgeConfigSpec.BooleanValue ETCSSounds;
 
+        // Banking Configuration
+        public final ForgeConfigSpec.BooleanValue enableBanking;
+        public final ForgeConfigSpec.DoubleValue maxBankingAngle;
+        public final ForgeConfigSpec.DoubleValue bankingSmoothness;
+        public final ForgeConfigSpec.DoubleValue bankingMinSpeed;
+        public final ForgeConfigSpec.DoubleValue bankingIntensity;
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -43,6 +49,20 @@ public class RealismConfig {
             ETCSSounds = builder.comment("Enable ETCS sounds")
                     .define("ETCS Sounds", true);
             builder.pop();
+
+            builder.push("Banking");
+            enableBanking = builder.comment("Enable banking (roll rotation) on curved tracks")
+                    .define("Enable Banking", true);
+            maxBankingAngle = builder.comment("Maximum banking angle in degrees")
+                    .defineInRange("Max Banking Angle", 30.0, 0.0, 90.0);
+            bankingSmoothness = builder.comment("Banking transition smoothness (0.0 = instant, 1.0 = very smooth)")
+                    .defineInRange("Banking Smoothness", 0.15, 0.0, 1.0);
+            bankingMinSpeed = builder.comment("Minimum speed (blocks/tick) for full banking effect")
+                    .defineInRange("Banking Min Speed", 0.5, 0.0, 10.0);
+            bankingIntensity = builder.comment("Banking intensity multiplier")
+                    .defineInRange("Banking Intensity", 1.0, 0.0, 10.0);
+            builder.pop();
+
             debugMode = builder.comment("Enable debug mode to see the modified acceleration")
                     .define("debugMode", false);
             builder.pop();
