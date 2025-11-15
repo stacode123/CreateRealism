@@ -131,7 +131,7 @@ public class TrainSettingsGui extends DLWindow {
                 }
         );
         maxTiltPicker.min.set((double) 0);
-        maxTiltPicker.max.set(45.0);
+        maxTiltPicker.max.set(90.0);
         maxTiltPicker.format.set(new INumberFormatAdapter.DecimalNumberFormat(1));
         maxTiltPicker.value.set((double) cs.customMaxTilt);
         maxTiltPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);

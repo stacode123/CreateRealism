@@ -1,10 +1,10 @@
 package net.Realism.forge;
 
+import net.Realism.CommonEvents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import purplecreate.tramways.events.CommonEvents;
 
 @Mod.EventBusSubscriber
 public class CommonEventsImpl {

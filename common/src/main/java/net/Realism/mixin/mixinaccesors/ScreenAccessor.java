@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(value = Screen.class, remap = false)
+@Mixin(value = Screen.class)
 public interface ScreenAccessor {
     @Invoker("addRenderableWidget")
     <T extends GuiEventListener & NarratableEntry> T realism$invokeAddRenderableWidget(T widget);

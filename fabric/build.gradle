@@ -82,7 +82,8 @@ processResources {
             "minecraft_version", minecraft_version,
             "create_version", create_fabric_version,
             "tramways_version", tramways_version,
-            "architectury_version", architectury_api_version
+            "architectury_version", architectury_api_version,
+            "dragonlib_version", dragonlib_version
             //"railways_version", railways_fabric_version.split("\\+")[0]
     )
     properties.forEach((k, v) -> inputs.property(k, v))

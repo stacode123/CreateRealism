@@ -2,6 +2,9 @@
   "required": true,
   "package": "net.Realism.forge.mixin",
   "compatibilityLevel": "JAVA_17",
+  "client": [
+    "client.OrientedContraptionEntityRenderMixin"
+  ],
   "mixins": [
     "AbstractContraptionEntityMixin",
     "TrackPlacementOverlayMixin",
