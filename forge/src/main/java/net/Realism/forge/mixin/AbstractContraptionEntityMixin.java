@@ -47,6 +47,10 @@ public class AbstractContraptionEntityMixin {
         }
     }
 
+    /**
+     * @author stacode
+     * @reason Inject doesnt work for this usecase
+     */
     @Overwrite()
     public Vec3 getPassengerPosition(Entity passenger, float partialTicks) {
         if (contraption == null)

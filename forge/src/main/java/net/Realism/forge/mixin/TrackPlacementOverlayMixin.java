@@ -7,7 +7,7 @@ import com.simibubi.create.content.trains.track.TrackPlacementOverlay;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrackPlacementInterface;
 import net.Realism.Interfaces.ITrackPlacementMixin;
-import net.Realism.mixinaccesors.PlacementInfoAccessor;
+import net.Realism.mixin.mixinaccesors.PlacementInfoAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;

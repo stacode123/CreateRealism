@@ -8,6 +8,7 @@ import com.simibubi.create.content.trains.graph.TrackEdge;
 import com.simibubi.create.content.trains.track.BezierConnection;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
+import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.RollSyncPacket;
@@ -31,6 +32,7 @@ import java.util.Objects;
 @Mixin(targets = "com.simibubi.create.content.trains.entity.Carriage$DimensionalCarriageEntity", remap = false)
 public class CarriageDimensionalEntityMixin {
 
+
     @Shadow
     @Final
     Carriage this$0; // The outer Carriage instance
@@ -44,7 +46,7 @@ public class CarriageDimensionalEntityMixin {
     @Inject(method = "alignEntity", at = @At("TAIL"))
     private void calculateAndApplyBanking(CarriageContraptionEntity entity, CallbackInfo ci) {
         // Check if banking is enabled
-        if (!RealismConfig.CLIENT.enableBanking.get()) {
+        if (!RealismConfig.CLIENT.enableBanking.get() || !RealismConfig.COMMON.GlobalBankingEnable.get()) {
             return;
         }
 
@@ -58,7 +60,10 @@ public class CarriageDimensionalEntityMixin {
         orientedEntity.realism$setPrevRoll(orientedEntity.realism$getRoll());
 
         // Calculate banking
-        float banking = realism$calculateBanking(entity);
+        if (!(this$0.train instanceof ITrainInterface Rtrain)){
+            return;
+        }
+        float banking = realism$calculateBanking(entity,Rtrain);
         orientedEntity.realism$setRoll(banking);
         RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(),orientedEntity.realism$getPrevRoll(),orientedEntity.getuid()));
 
@@ -73,7 +78,7 @@ public class CarriageDimensionalEntityMixin {
      * Calculate banking angle based on track curvature and train speed
      */
     @Unique
-    private float realism$calculateBanking(CarriageContraptionEntity entity) {
+    private float realism$calculateBanking(CarriageContraptionEntity entity,ITrainInterface Rtrain) {
         // Get the leading bogey
         CarriageBogey leadingBogey = this$0.leadingBogey();
         if (leadingBogey == null) {
@@ -127,15 +132,30 @@ public class CarriageDimensionalEntityMixin {
         float bankingAngle = (float) Math.toDegrees(Math.asin(bankingDot));
 
         // Apply intensity multiplier
-        float intensity = RealismConfig.CLIENT.bankingIntensity.get().floatValue();
+        float intensity = 1;
         bankingAngle *= 0.02f;
         bankingAngle *= intensity;
+        if (Rtrain.realism$getSettings().isTiltPassive()){
+            bankingAngle *= 2f;
+        }
+        if (Rtrain.realism$getSettings().isTiltActive()){
+            bankingAngle *= 4.5f;
+        }
+        if (Rtrain.realism$getSettings().isTiltCustom()){
+            bankingAngle *= Rtrain.realism$getSettings().customTiltIntensity;
+        }
 
         double speed = this$0.train.speed*20*3.6f;
-        float minSpeed = RealismConfig.CLIENT.bankingMinSpeed.get().floatValue();
+        float minSpeed = 80f;
+        if(Rtrain.realism$getSettings().isTiltCustom()){
+            minSpeed = Rtrain.realism$getSettings().customMinSpeed.floatValue();
+        }
+        if(Rtrain.realism$getSettings().isTiltActive()){
+            minSpeed = 1/2 *minSpeed;
+        }
         float maxSpeed = AllConfigs.server().trains.trainTopSpeed.getF();
         float speedFactor;
-        if (speed <= minSpeed) {
+        if (Math.abs(speed) <= minSpeed) {
             speedFactor = 0f;
         } else if (speed >= maxSpeed) {
             speedFactor = 1f;
@@ -144,7 +164,7 @@ public class CarriageDimensionalEntityMixin {
             if (range <= 0f) {
                 speedFactor = 1f;
             } else {
-                speedFactor = (float) ((speed - minSpeed) / range);
+                speedFactor =(float) ((Math.abs(speed) - minSpeed) / range);
                 speedFactor = Mth.clamp(speedFactor, 0f, 1f);
             }
         }
@@ -153,8 +173,17 @@ public class CarriageDimensionalEntityMixin {
         float targetBanking = bankingAngle * speedFactor;
 
         // Clamp to maximum banking angle
-        float maxAngle = RealismConfig.CLIENT.maxBankingAngle.get().floatValue();
-        return Mth.clamp(targetBanking, -maxAngle, maxAngle);
+        float maxAngle = 15;
+        if(Rtrain.realism$getSettings().isTiltCustom()){
+            maxAngle = Rtrain.realism$getSettings().customMaxTilt;
+        }
+        targetBanking = Mth.clamp(targetBanking, -maxAngle, maxAngle);
+        if(Rtrain.realism$getSettings().isTiltNone() || !(Rtrain.realism$getSettings().isInside())){
+            return targetBanking;
+        }
+        else{
+            return -targetBanking;
+        }
     }
 
     /**

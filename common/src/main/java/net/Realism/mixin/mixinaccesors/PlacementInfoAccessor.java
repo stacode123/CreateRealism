@@ -1,4 +1,4 @@
-package net.Realism.mixinaccesors;
+package net.Realism.mixin.mixinaccesors;
 
 import com.simibubi.create.content.trains.track.BezierConnection;
 import com.simibubi.create.content.trains.track.TrackPlacement;

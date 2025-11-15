@@ -20,6 +20,7 @@ loom {
             vmArg("-Dfabric-api.datagen.output-dir=${project(":common").file("src/generated/resources")}")
             vmArg("-Dporting_lib.datagen.existing_resources=${project(":common").file("src/main/resources")}")
 
+
             environmentVariable("DATAGEN", "TRUE")
         }
     }
@@ -67,6 +68,8 @@ dependencies {
     modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
 
     modImplementation "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
+
+    modImplementation(include("de.mrjulsen.mcdragonlib:dragonlib-fabric:$minecraft_version-$dragonlib_version"))
 }
 
 processResources {
@@ -136,6 +139,7 @@ publishMods {
 
         requires("create-fabric")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
 
@@ -148,6 +152,8 @@ publishMods {
 
         requires("create-fabric")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
+
 }

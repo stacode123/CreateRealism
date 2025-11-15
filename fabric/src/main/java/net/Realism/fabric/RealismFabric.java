@@ -24,6 +24,7 @@ public class RealismFabric implements ModInitializer {
         FabricConfigRegistration.register();
         commonSetup();
         serverInit();
+        CommonEventsImpl.register();
         com.tterrag.registrate.fabric.EnvExecutor.runWhenOn(EnvType.CLIENT, () -> () -> {
             clientInit();
 

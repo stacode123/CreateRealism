@@ -1,10 +1,10 @@
 // common/src/main/java/net/Realism/mixin/TrackPlacementMixin.java
-package net.Realism.mixin;
+package net.Realism.mixin.client;
 
 import com.simibubi.create.content.trains.track.BezierConnection;
 import com.simibubi.create.content.trains.track.TrackPlacement;
 import net.Realism.Interfaces.ITrackPlacementInterface;
-import net.Realism.mixinaccesors.PlacementInfoAccessor;
+import net.Realism.mixin.mixinaccesors.PlacementInfoAccessor;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

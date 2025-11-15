@@ -6,6 +6,7 @@ import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
+import net.Realism.config.RealismConfig;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -47,6 +48,10 @@ public class AbstractContraptionEntityMixin {
         }
     }
 
+    /**
+     * @author stacode
+     * @reason Inject doesnt work for this usecase
+     */
     @Overwrite()
     public Vec3 getPassengerPosition(Entity passenger, float partialTicks) {
         if (contraption == null)
@@ -69,7 +74,7 @@ public class AbstractContraptionEntityMixin {
         BlockPos seat = contraption.getSeatOf(id);
         if (seat == null)
             return null;
-        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity){
+        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity && RealismConfig.CLIENT.enablePlayerTilt.get()){
             return toGlobalVector(Vec3.atLowerCornerOf(seat)
                     .zRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
                     .add(.5, passenger.getMyRidingOffset() + ySize - .15f, .5), partialTicks)

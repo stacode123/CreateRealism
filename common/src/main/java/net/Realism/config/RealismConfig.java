@@ -6,16 +6,24 @@ public class RealismConfig {
     // Common Config
     public static class Common {
         public final  ForgeConfigSpec.BooleanValue GlobalETCSEnable;
+        public final  ForgeConfigSpec.BooleanValue GlobalBankingEnable;
         public final ForgeConfigSpec.BooleanValue EnableCustomTrainAcceleration;
-        public final  ForgeConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
+        public final ForgeConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
+        public final ForgeConfigSpec.BooleanValue AllowBiggerValuesTrains;
 
         Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
             builder.push("Custom train acceleration");
-            EnableCustomTrainAcceleration = builder.comment("Enable custom train acceleration based on the number of carriages")
+            EnableCustomTrainAcceleration = builder.comment("Enable custom train acceleration(Custom and Standard)")
                     .define("Enable Custom Train Acceleration", true);
-            CustomTrainAccelerationMultiplyer = builder.comment("Multiplier for custom train acceleration(Higher = slower acceleration per Carrige)")
-                    .defineInRange("Custom Train Acceleration Multiplyer", 1.0, 0.1, 5.0);
+            CustomTrainAccelerationMultiplyer = builder.comment("Multiplier for custom train acceleration(Higher = slower acceleration per Carriage)(For trains set on Standard)")
+                    .defineInRange("Custom Train Acceleration Multiplayer", 1.0, 0.1, 5.0);
+            AllowBiggerValuesTrains = builder.comment("Allow players to set custom acceleration values larger than default(For trains set on Custom)")
+                    .define("Allow Large Acceleration", true);
+            builder.pop();
+            builder.push("Banking");
+            GlobalBankingEnable = builder.comment("Global enable of ALL train banking")
+                    .define("Global Banking Enable", true);
             builder.pop();
             builder.push("ETCS");
             GlobalETCSEnable = builder.comment("Enable ETCS for all trains")
@@ -35,9 +43,6 @@ public class RealismConfig {
         // Banking Configuration
         public final ForgeConfigSpec.BooleanValue enableBanking;
         public final ForgeConfigSpec.BooleanValue enablePlayerTilt;
-        public final ForgeConfigSpec.DoubleValue maxBankingAngle;
-        public final ForgeConfigSpec.DoubleValue bankingMinSpeed;
-        public final ForgeConfigSpec.DoubleValue bankingIntensity;
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -51,19 +56,12 @@ public class RealismConfig {
             builder.pop();
 
             builder.push("Banking");
-            enableBanking = builder.comment("Enable banking (roll rotation) on curved tracks")
+            enableBanking = builder.comment("Enable banking rendering (roll rotation) on curved tracks")
                     .define("Enable Banking", true);
-            enablePlayerTilt = builder.comment("Enable player camera and model tilting when riding on banked trains")
+            enablePlayerTilt = builder.comment("Rotate player camera with the train(Forge only)")
                     .define("Enable Player Tilt", true);
-            maxBankingAngle = builder.comment("Maximum banking angle in degrees")
-                    .defineInRange("Max Banking Angle", 15.0, 0.0, 30.0);
-            bankingMinSpeed = builder.comment("Minimum speed (kmn/h) for full banking effect")
-                    .defineInRange("Banking Min Speed", 80.0, 0, 300);
-            bankingIntensity = builder.comment("Banking intensity multiplier")
-                    .defineInRange("Banking Intensity", 1.0, 0.0, 2.0);
             builder.pop();
-
-            debugMode = builder.comment("Enable debug mode to see the modified acceleration")
+            debugMode = builder.comment("Enable debug mode")
                     .define("debugMode", false);
             builder.pop();
         }
