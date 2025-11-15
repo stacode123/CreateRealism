@@ -47,3 +47,10 @@ mandatory=true
 versionRange="[${architectury_api_version},)"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.realism]]
+modId="dragonlib"
+mandatory=true
+versionRange="[${dragonlib_version},)"
+ordering="NONE"
+side="BOTH"
