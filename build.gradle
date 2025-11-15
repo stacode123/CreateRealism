@@ -117,6 +117,8 @@ tasks.create("publishRealism") {
             dependsOn tasks.build, ":fabric:publishMods", ":forge:publishMods"
             break
         case "fabric":
+            dependsOn "${platform}:build", "${platform}:publishMods"
+            break
         case "forge":
             dependsOn "${platform}:build", "${platform}:publishMods"
             break

@@ -117,7 +117,7 @@ publishMods {
     changelog = rootProject.file("CHANGELOG.md").text
 
     curseforge {
-        displayName = "${mod_version}+forge-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = curseforge_id
         accessToken = System.getenv("CURSEFORGE_TOKEN")
         minecraftVersions.add(minecraft_version)
@@ -131,7 +131,7 @@ publishMods {
     }
 
     modrinth {
-        displayName = "${mod_version}+forge-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = modrinth_id
         accessToken = System.getenv("MODRINTH_TOKEN")
         minecraftVersions.add(minecraft_version)
