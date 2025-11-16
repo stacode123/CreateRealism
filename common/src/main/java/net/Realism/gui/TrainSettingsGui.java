@@ -287,6 +287,11 @@ public class TrainSettingsGui extends DLWindow {
         AccelerationLabel.text.get().set("Acceleration: ");
         AccelerationLabel.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);
 
+        DLRichTextLabel CurrentAccelerationLabel = addComponent(
+                new DLRichTextLabel(195, 100, 200, 20)
+        );
+        CurrentAccelerationLabel.text.get().set("Default Acceleration: " + AllConfigs.server().trains.trainAcceleration.get().toString() + " m/s^2");
+
 
 
 
@@ -298,10 +303,12 @@ public class TrainSettingsGui extends DLWindow {
             if (te.index() == 2) { // Custom selected
                 AccelerationPicker.visible.set(true);
                 AccelerationLabel.visible.set(true);
+                CurrentAccelerationLabel.visible.set(true);
             }
             else{
                 AccelerationPicker.visible.set(false);
                 AccelerationLabel.visible.set(false);
+                CurrentAccelerationLabel.visible.set(false);
                 }
             return false; // return true to stop further propagation if needed
 
