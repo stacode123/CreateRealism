@@ -1,4 +1,4 @@
-package net.Realism.forge.mixin;
+package net.Realism.fabric.mixin.client;
 
 import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
 import com.simibubi.create.content.contraptions.Contraption;
@@ -6,6 +6,7 @@ import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
+import net.Realism.config.RealismConfig;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -73,9 +74,9 @@ public class AbstractContraptionEntityMixin {
         BlockPos seat = contraption.getSeatOf(id);
         if (seat == null)
             return null;
-        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity){
+        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity && RealismConfig.CLIENT.enablePlayerTilt.get()){
             return toGlobalVector(Vec3.atLowerCornerOf(seat)
-                    .xRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
+                    .zRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
                     .add(.5, passenger.getMyRidingOffset() + ySize - .15f, .5), partialTicks)
                     .add(VecHelper.getCenterOf(BlockPos.ZERO))
                     .subtract(0.5, ySize, 0.5);

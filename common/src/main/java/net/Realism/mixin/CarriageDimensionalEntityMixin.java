@@ -65,13 +65,17 @@ public class CarriageDimensionalEntityMixin {
         }
         float banking = realism$calculateBanking(entity,Rtrain);
         orientedEntity.realism$setRoll(banking);
-        RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(),orientedEntity.realism$getPrevRoll(),orientedEntity.getuid()));
-
+        if(!entity.level().isClientSide) {
+            RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(), orientedEntity.realism$getPrevRoll(), orientedEntity.getuid()));
+        }
         // For first position update, ensure prevRoll matches roll
         if (entity.firstPositionUpdate) {
             orientedEntity.realism$setPrevRoll(banking);
-            RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(),orientedEntity.realism$getPrevRoll(),orientedEntity.getuid()));
+            if(!entity.level().isClientSide){
+                RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(),orientedEntity.realism$getPrevRoll(),orientedEntity.getuid()));
+            }
         }
+
     }
 
     /**

@@ -10,7 +10,6 @@ import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
-import net.Realism.debug.RealismDebuger;
 import net.Realism.network.TrainSettingsUpdatePacket;
 import net.Realism.trains.TrainSettings;
 import net.Realism.trains.etcs.ETCS;
@@ -125,10 +124,7 @@ public abstract class TrainMixin implements ITrainInterface {
             ac -= reduce;
             if (ac < 0) ac = 0.0001f;
 
-            if (RealismConfig.CLIENT.debugMode.get()) {
-                // Send data to the debug logger instead of printing directly
-                RealismDebuger.getInstance().addAccelerationDebugInfo(ac * 400, carriages.size(), locomotives);
-            }
+
 
             return ac;
         }

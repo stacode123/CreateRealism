@@ -1,5 +1,8 @@
 # 0.6 The Tilting Update
 
+**Now requires dragonlib > 3.0.0**
+**Always backup your save before updating!**
+
 ## New Features
 
 - Added settings menu for trains. 
@@ -8,6 +11,5 @@
   
 - Added train banking/tilting
 
-
- **Now requires dragonlib > 3.0.0**
-**Always backup your save before updating!**
+## Bug Fixes
+- Fixed a bug where pressing shift would cause a crash.

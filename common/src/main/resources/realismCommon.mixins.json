@@ -4,17 +4,17 @@
   "package": "net.Realism.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "client.CarriageContraptionEntityMixin",
     "client.StationScreenMixin",
+    "client.TrackPlacementMixin",
+    "mixinaccesors.PlacementInfoAccessor",
     "mixinaccesors.ScreenAccessor"
   ],
   "mixins": [
     "BezierConnectionMixin",
-    "CarriageContraptionEntityMixin",
     "CarriageDimensionalEntityMixin",
     "OrientedContraptionEntityMixin",
     "TrainMixin",
-    "client.TrackPlacementMixin",
-    "mixinaccesors.PlacementInfoAccessor",
     "mixinaccesors.TramSignDataAccessor"
   ],
   "injectors": {

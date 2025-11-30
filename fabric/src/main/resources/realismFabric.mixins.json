@@ -4,10 +4,10 @@
   "package": "net.Realism.fabric.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "client.AbstractContraptionEntityMixin",
     "client.OrientedContraptionEntityRenderMixin"
   ],
   "mixins": [
-    "AbstractContraptionEntityMixin",
     "TrackPlacementOverlayMixin",
     "TrainHudMixin"
   ],

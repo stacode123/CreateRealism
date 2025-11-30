@@ -1,4 +1,4 @@
-package net.Realism.mixin;
+package net.Realism.mixin.client;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;

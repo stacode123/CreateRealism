@@ -1,4 +1,4 @@
-package net.Realism.fabric.mixin;
+package net.Realism.forge.mixin.client;
 
 import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
 import com.simibubi.create.content.contraptions.Contraption;
@@ -6,7 +6,6 @@ import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
-import net.Realism.config.RealismConfig;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +34,7 @@ public class AbstractContraptionEntityMixin {
 
 
     @Inject(method = "stopControlling", at = @At("TAIL"))
+    //@OnlyIn(Dist.CLIENT)
     private void AfterStopControlling(CallbackInfo ci) {
         //noinspection ConstantValue
         if(this.getClass().equals(CarriageContraptionEntity.class)){
@@ -74,9 +74,9 @@ public class AbstractContraptionEntityMixin {
         BlockPos seat = contraption.getSeatOf(id);
         if (seat == null)
             return null;
-        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity && RealismConfig.CLIENT.enablePlayerTilt.get()){
+        if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity){
             return toGlobalVector(Vec3.atLowerCornerOf(seat)
-                    .zRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
+                    .xRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
                     .add(.5, passenger.getMyRidingOffset() + ySize - .15f, .5), partialTicks)
                     .add(VecHelper.getCenterOf(BlockPos.ZERO))
                     .subtract(0.5, ySize, 0.5);
