@@ -13,7 +13,6 @@ import purplecreate.tramways.content.signs.TramSignPoint;
 import purplecreate.tramways.content.signs.demands.SignDemand;
 import purplecreate.tramways.content.signs.demands.TemporaryEndSignDemand;
 import purplecreate.tramways.content.signs.demands.TemporarySpeedSignDemand;
-import purplecreate.tramways.mixinInterfaces.ISpeedLimitableTrain;
 
 import java.util.*;
 
@@ -62,6 +61,7 @@ public class TramwaysCompat {
                 CompoundTag tag = null;
                 SignDemand demand = null;
 
+                //noinspection ReassignedVariable
                 if (sides.get(sign.getPrimary()) == null) continue;
                 for (TramSignPoint.SignData signD : new HashSet<>(sides.get(sign.getPrimary()))) {
                     if (signD == null) continue;
@@ -89,24 +89,28 @@ public class TramwaysCompat {
                         double signSpeedLimit = tag.getInt("Throttle");
                         signSpeedLimit = (signSpeedLimit / 100) * maxSpeed;
                         cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(), signSpeedLimit));
-                        if (demand instanceof TemporarySpeedSignDemand) {
-                            LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-1).speedLimit();
+                        if (demand instanceof TemporarySpeedSignDemand && !first) {
+                            LastLimit = (int) cachedSpeedLimits.get(cachedSpeedLimits.size()-2).speedLimit();
+                        } else if (demand instanceof TemporarySpeedSignDemand) {
+//
+                            double speed = train.maxSpeed()*20;
+                            LastLimit = (int) (train.throttle*speed*3.6);
                         }
-                    first= false;}
+                        first= false;}
                     if (demand instanceof TemporaryEndSignDemand && !first) {
                         cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(), LastLimit));}
-                    else if (demand instanceof TemporarySpeedSignDemand && first) {
-                        ISpeedLimitableTrain Ttrain = (ISpeedLimitableTrain) train;
-                        double tempSpeedLimit = 300.0;
+                    else if (demand instanceof TemporaryEndSignDemand && first) {
+                       double tempSpeedLimit = 300.0;
                         try {
-                            java.lang.reflect.Field tempSPeedLimitField = ISpeedLimitableTrain.class.getDeclaredField("tempSpeedLimit$actual");
+                            // Fix: Look for the field in the train's class, not the interface class
+                            java.lang.reflect.Field tempSPeedLimitField = train.getClass().getDeclaredField("tramways$storedPermanent");
                             tempSPeedLimitField.setAccessible(true);
-                            tempSpeedLimit = (double) tempSPeedLimitField.get(Ttrain);
+                            tempSpeedLimit = (double) tempSPeedLimitField.get(train);
                         }
                         catch (Exception e) {
                             RealismMod.LOGGER.error("Error accessing tempSpeedLimit field: " + e.getMessage());
                         }
-                        cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(),tempSpeedLimit));
+                        cachedSpeedLimits.add(new ETCS.SpeedLimit(sign.getDistance(),tempSpeedLimit*3.6*train.maxSpeed()*20));
                     }
                     first = false;
                 }
