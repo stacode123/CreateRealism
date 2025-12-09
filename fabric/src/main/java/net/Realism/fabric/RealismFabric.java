@@ -1,7 +1,6 @@
 package net.Realism.fabric;
 
 import io.github.fabricators_of_create.porting_lib.util.EnvExecutor;
-import net.Realism.RealismBlocks;
 import net.Realism.RealismMod;
 import net.Realism.fabric.config.FabricConfigRegistration;
 import net.fabricmc.api.EnvType;
@@ -19,16 +18,13 @@ public class RealismFabric implements ModInitializer {
                 () -> () -> "{} is accessing Porting Lib on a Fabric client!",
                 () -> () -> "{} is accessing Porting Lib on a Fabric server!"
         ), RealismMod.NAME);
-        // on fabric, Registrates must be explicitly finalized and registered.
-        RealismBlocks.REGISTRATE.register();
+        RealismMod.REGISTRATE.register();
         FabricConfigRegistration.register();
         commonSetup();
         serverInit();
         CommonEventsImpl.register();
         com.tterrag.registrate.fabric.EnvExecutor.runWhenOn(EnvType.CLIENT, () -> () -> {
             clientInit();
-
-
         });
     }
 }

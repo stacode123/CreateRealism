@@ -38,7 +38,7 @@ public class TrainSettingsGui extends DLWindow {
         DLRichTextLabel title = addComponent(
                 new DLRichTextLabel(140, 10, 200, 20) {}
         );
-        title.text.get().set("Create: Realism Train Settings");
+        title.text.get().set(Component.translatable("realism.gui.train_settings.title").getString());
 
 
 
@@ -48,10 +48,10 @@ public class TrainSettingsGui extends DLWindow {
 
                 }
         );
-        Tiltbutton.items.add("None");
-        Tiltbutton.items.add("Passive");
-        Tiltbutton.items.add("Active");
-        Tiltbutton.items.add("Custom");
+        Tiltbutton.items.add(Component.translatable("realism.gui.tilt.none").getString());
+        Tiltbutton.items.add(Component.translatable("realism.gui.tilt.passive").getString());
+        Tiltbutton.items.add(Component.translatable("realism.gui.tilt.active").getString());
+        Tiltbutton.items.add(Component.translatable("realism.gui.tilt.custom").getString());
         Tiltbutton.text.set(Component.literal(""));
         Tiltbutton.textFormat.set((ITextFormatter<DLCycleButton<String>>) (src ->
                 TextUtils.text(src.selectedItem.get().map(Object::toString).orElse(""))
@@ -69,11 +69,11 @@ public class TrainSettingsGui extends DLWindow {
                         if (isMouseOver(mousex,mousey)) {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
-                                            TextUtils.text("Select the train's tilt setting."),
-                                            TextUtils.text("None: Only Centrifugal forces.(Max 2°)"),
-                                            TextUtils.text("Passive: Passively tilts to counteract lateral forces.(Max 4°)"),
-                                            TextUtils.text("Active: Actively tilts to counteract lateral forces.(Max >8°)"),
-                                            TextUtils.text("Custom: User-defined tilt parameters.")
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.header").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.none").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.passive").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.active").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.custom").getString())
                                     ),
                                     screenW
                             );
@@ -81,7 +81,7 @@ public class TrainSettingsGui extends DLWindow {
                     }
                 }
         );
-        tiltLabel.text.get().set("Train Tilt: ");
+        tiltLabel.text.get().set(Component.translatable("realism.gui.tilt.label").getString());
 
         DLNumberPicker minSpeedPicker = addComponent(
                 new DLNumberPicker(75, 70, 80, 20){
@@ -92,8 +92,7 @@ public class TrainSettingsGui extends DLWindow {
                         if (isMouseOver(mousex,mousey)) {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
-                                            TextUtils.text("Minimum speed km/h at which the tilt effect starts functioning")
-
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.min_speed.tooltip").getString())
                                     ),
                                     screenW
                             );
@@ -110,7 +109,7 @@ public class TrainSettingsGui extends DLWindow {
         DLRichTextLabel minSpeedLabel = addComponent(
                 new DLRichTextLabel(19, 75, 60, 20)
         );
-        minSpeedLabel.text.get().set("Min Speed: ");
+        minSpeedLabel.text.get().set(Component.translatable("realism.gui.tilt.min_speed.label").getString());
         minSpeedLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLNumberPicker maxTiltPicker = addComponent(
@@ -122,7 +121,7 @@ public class TrainSettingsGui extends DLWindow {
                         if (isMouseOver(mousex,mousey)) {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
-                                            TextUtils.text("Maximum tilt angle in degrees")
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.max_tilt.tooltip").getString())
                                     ),
                                     screenW
                             );
@@ -141,7 +140,7 @@ public class TrainSettingsGui extends DLWindow {
         DLRichTextLabel maxTiltLabel = addComponent(
                 new DLRichTextLabel(29, 100, 60, 20)
         );
-        maxTiltLabel.text.get().set("Max Tilt: ");
+        maxTiltLabel.text.get().set(Component.translatable("realism.gui.tilt.max_tilt.label").getString());
         maxTiltLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLNumberPicker IntensityPicker = addComponent(
@@ -153,7 +152,7 @@ public class TrainSettingsGui extends DLWindow {
                         if (isMouseOver(mousex,mousey)) {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
-                                            TextUtils.text("How powerful the tilt effect is")
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.intensity.tooltip").getString())
                                     ),
                                     screenW
                             );
@@ -175,12 +174,12 @@ public class TrainSettingsGui extends DLWindow {
 
                 }
         );
-        IntensityLabel.text.get().set("Tilt Intensity: ");
+        IntensityLabel.text.get().set(Component.translatable("realism.gui.tilt.intensity.label").getString());
         IntensityLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLRichTextLabel TiltDirectionLabel = addComponent(
                 new DLRichTextLabel(5, 155, 72, 20){});
-        TiltDirectionLabel.text.get().set("Tilt Direction: ");
+        TiltDirectionLabel.text.get().set(Component.translatable("realism.gui.tilt.direction.label").getString());
         TiltDirectionLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
 
@@ -189,8 +188,8 @@ public class TrainSettingsGui extends DLWindow {
 
                 }
         );
-        DirectionButton.items.add("Inside");
-        DirectionButton.items.add("Outside");
+        DirectionButton.items.add(Component.translatable("realism.gui.tilt.direction.inside").getString());
+        DirectionButton.items.add(Component.translatable("realism.gui.tilt.direction.outside").getString());
         DirectionButton.textFormat.set((ITextFormatter<DLCycleButton<String>>) (src ->
                 TextUtils.text(src.selectedItem.get().map(Object::toString).orElse(""))
                         .withStyle(src.text.get().getStyle())
@@ -230,9 +229,9 @@ public class TrainSettingsGui extends DLWindow {
 
                 }
         );
-        AccelerationSettingbutton.items.add("None");
-        AccelerationSettingbutton.items.add("Standard");
-        AccelerationSettingbutton.items.add("Custom");
+        AccelerationSettingbutton.items.add(Component.translatable("realism.gui.accel.setting.none").getString());
+        AccelerationSettingbutton.items.add(Component.translatable("realism.gui.accel.setting.standard").getString());
+        AccelerationSettingbutton.items.add(Component.translatable("realism.gui.accel.setting.custom").getString());
 
         AccelerationSettingbutton.textFormat.set((ITextFormatter<DLCycleButton<String>>) (src ->
                 TextUtils.text(src.selectedItem.get().map(Object::toString).orElse(""))
@@ -250,11 +249,11 @@ public class TrainSettingsGui extends DLWindow {
                         if (isMouseOver(mousex,mousey)) {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
-                                            TextUtils.text("Select the train's acceleration setting."),
-                                            TextUtils.text("None: Acceleration not affected"),
-                                            TextUtils.text("Standard: Acceleration is affected,"),
-                                            TextUtils.text("by train's weight and engine power."),
-                                            TextUtils.text("Custom: User-defined acceleration.")
+                                            TextUtils.text(Component.translatable("realism.gui.accel.tooltip.header").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.accel.tooltip.none").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.accel.tooltip.standard1").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.accel.tooltip.standard2").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.accel.tooltip.custom").getString())
                                     ),
                                     screenW
                             );
@@ -262,7 +261,7 @@ public class TrainSettingsGui extends DLWindow {
                     }
                 }
         );
-        AccelerationSettingLabel.text.get().set("Train Acceleration: ");
+        AccelerationSettingLabel.text.get().set(Component.translatable("realism.gui.accel.label").getString());
 
         DLNumberPicker AccelerationPicker = addComponent(
                 new DLNumberPicker(275, 70, 80, 20)
@@ -284,13 +283,13 @@ public class TrainSettingsGui extends DLWindow {
         DLRichTextLabel AccelerationLabel = addComponent(
                 new DLRichTextLabel(195, 75, 105, 20)
         );
-        AccelerationLabel.text.get().set("Acceleration: ");
+        AccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.value.label").getString());
         AccelerationLabel.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);
 
         DLRichTextLabel CurrentAccelerationLabel = addComponent(
                 new DLRichTextLabel(195, 100, 200, 20)
         );
-        CurrentAccelerationLabel.text.get().set("Default Acceleration: " + AllConfigs.server().trains.trainAcceleration.get().toString() + " m/s^2");
+        CurrentAccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.default", AllConfigs.server().trains.trainAcceleration.get().toString()).getString());
 
 
 
@@ -316,7 +315,7 @@ public class TrainSettingsGui extends DLWindow {
         DLButton ConfirmButton = addComponent(
                 new DLButton(180, 175, 80, 20)
         );
-        ConfirmButton.text.set(Component.literal("Confirm"));
+        ConfirmButton.text.set(Component.translatable("realism.button.confirm"));
         ConfirmButton.visible.set(true);
         ConfirmButton.addEventListener(DLGuiStandardEvents.ClickEvent.class, (evt,s) -> {
             TrainSettings ts = new TrainSettings();

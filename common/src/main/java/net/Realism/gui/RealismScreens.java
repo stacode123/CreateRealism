@@ -14,7 +14,7 @@ public class RealismScreens extends Screen implements IRealismScreens {
     private DLScreenWrapper wrapper;
 
     public RealismScreens() {
-        super(Component.literal("My Screen"));
+        super(Component.translatable("realism.screen.title"));
     }
 
     @Override

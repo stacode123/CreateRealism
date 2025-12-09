@@ -16,6 +16,9 @@
   "entrypoints": {
     "main": [
       "net.Realism.fabric.RealismFabric"
+    ],
+    "fabric-datagen": [
+      "net.Realism.datagen.DataGenEntry"
     ]
   },
   "mixins": [

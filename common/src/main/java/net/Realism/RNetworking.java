@@ -47,9 +47,10 @@ public class RNetworking {
                     return;
 
                 mc.getConnection().onDisconnect(
-                        Component.literal(
-                                "Create: Tramways network versions do not match! Server expected %s, client has %s"
-                                        .formatted(serverVersion, RNetworking.VERSION)
+                        Component.translatable(
+                                "realism.network.version_mismatch",
+                                serverVersion,
+                                RNetworking.VERSION
                         )
                 );
             }

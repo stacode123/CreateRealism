@@ -102,7 +102,6 @@ public class TramwaysCompat {
                     else if (demand instanceof TemporaryEndSignDemand && first) {
                        double tempSpeedLimit = 300.0;
                         try {
-                            // Fix: Look for the field in the train's class, not the interface class
                             java.lang.reflect.Field tempSPeedLimitField = train.getClass().getDeclaredField("tramways$storedPermanent");
                             tempSPeedLimitField.setAccessible(true);
                             tempSpeedLimit = (double) tempSPeedLimitField.get(train);

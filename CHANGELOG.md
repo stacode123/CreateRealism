@@ -10,6 +10,8 @@
   - Enabled custom acceleration settings with None and Custom modes.
   
 - Added train banking/tilting
+- language support
+
 
 ## Bug Fixes
 - Fixed a bug where pressing shift would cause a crash.

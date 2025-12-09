@@ -66,6 +66,7 @@ dependencies {
     }
     modCompileOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
     modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
+    //modImplementation("curse.maven:journeymap-32274:5789354")
 
     modImplementation "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
 
