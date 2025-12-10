@@ -7,32 +7,27 @@ import com.mojang.math.Axis;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import com.simibubi.create.content.trains.entity.Train;
 import net.Realism.RNetworking;
-import net.Realism.RealismExpectPlatform;
 import net.Realism.compat.TramwaysCompat;
 import net.Realism.config.RealismConfig;
-import net.Realism.network.ETCSStartStopPacket;
 import net.Realism.network.ETCSSyncPacket;
 import net.Realism.network.SteerDirectionPacket;
 import net.Realism.trains.SignalFinder;
-import net.Realism.trains.SignalFinder.SignalScanResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.Realism.trains.SignalFinder.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
+import static net.Realism.compat.isModLoaded.isTramwaysLoaded;
 import static net.Realism.network.SteerDirectionPacket.KeyPressType.*;
 import static net.Realism.trains.etcs.ETCSsounds.*;
-import static net.Realism.trains.etcs.ETCStools.optimizedRenderSpeedCurve;
-import static net.Realism.trains.etcs.ETCStools.renderElement;
+import static net.Realism.trains.etcs.ETCStools.*;
 
 
 public class ETCS {
@@ -72,12 +67,10 @@ public class ETCS {
     private long lastKeyPressTime = 0;
     private static final long KEY_COOLDOWN_MS = 300;
 
-    private int trackspeedlimit = 300;
+    private int trackspeedlimit = 400;
     public ETCS(Train train) {
         this.train = train;
     }
-
-    public boolean toUpdate = false;
 
     /**
      * Update method to be called during game logic/tick updates.
@@ -119,7 +112,7 @@ public class ETCS {
         this.distanceToSignal = s.getDistanceToClosestOccupiedSignal();
 
         // Process tram signs for speed limits
-        if (RealismExpectPlatform.isModLoaded("tramways")) {
+        if (isTramwaysLoaded()) {
             if (trackspeedlimit==0){
                 trackspeedlimit = 20;
             }
@@ -127,7 +120,7 @@ public class ETCS {
         } else {
             // Reset speed limits when Tramways isn't loaded
             cachedSpeedLimits = new ArrayList<>();
-            trackspeedlimit = 300;
+            trackspeedlimit = 400;
         }
 
         float distance = (float) s.getDistanceToClosestOccupiedSignal();
@@ -162,15 +155,7 @@ public class ETCS {
         syncToClients();
     }
 
-    public void start(){
-        toUpdate = true;
-        RNetworking.sendToServer(new ETCSStartStopPacket(toUpdate,train.id));
-    }
 
-    public void stop(){
-        toUpdate = false;
-        RNetworking.sendToServer(new ETCSStartStopPacket(toUpdate,train.id));
-    }
     /**
      * Render method to be called during render cycle.
      * Only contains rendering code, using data calculated in update().
@@ -477,12 +462,12 @@ public class ETCS {
         Font font = Minecraft.getInstance().font;
         ResourceLocation flag = new ResourceLocation("realism:textures/flag.png");
         for (SpeedLimit s : cachedSpeedLimits){
-            if (s.distance() > distanceToSignal){continue;}
-            int pixelPos = calculateDistancePixelPosition(s.distance(), zoom);
+            if (s.getDistance() > distanceToSignal){continue;}
+            int pixelPos = calculateDistancePixelPosition(s.getDistance(), zoom);
             //int pixelPos = 1;
             // Render the item at the calculated position
             renderElement(graphics, flag, xPos+386 , yPos +235 - pixelPos, 19, 11);
-            graphics.drawString(font, String.valueOf((int)s.speedLimit()), xPos+406, yPos+235 - pixelPos, 0xFFFFFFFF);
+            graphics.drawString(font, String.valueOf((int)s.getSpeedLimit()), xPos+406, yPos+235 - pixelPos, 0xFFFFFFFF);
         }
         if( distanceToBrakingPoint >0 && distanceToBrakingPoint < ((double) 4000 /zoom)){
             int pixelPos = calculateDistancePixelPosition(distanceToBrakingPoint, zoom);
@@ -607,9 +592,9 @@ public class ETCS {
         // Check for speed limits from tram signs
         int limitBasedSpeed = Integer.MAX_VALUE;
         for (SpeedLimit speedLimit : cachedSpeedLimits) {
-            if (speedLimit.distance() > 0 && speedLimit.distance() <= distance * 1.5) {
-                float distToLimit = (float) speedLimit.distance();
-                float targetSpeed = (float) speedLimit.speedLimit() / 3.6f; // Convert km/h to m/s
+            if (speedLimit.getDistance() > 0 && speedLimit.getDistance() <= distance * 1.5) {
+                float distToLimit = (float) speedLimit.getDistance();
+                float targetSpeed = (float) speedLimit.getSpeedLimit() / 3.6f; // Convert km/h to m/s
 
                 float targetSpeedSq = targetSpeed * targetSpeed;
                 safeSpeed = (float) (Math.sqrt(targetSpeedSq + 2 * (maxDeceleration * 0.9) * distToLimit) * 3.6);
@@ -618,12 +603,12 @@ public class ETCS {
 
                 if (adjustedLimit < limitBasedSpeed) {
                     limitBasedSpeed = adjustedLimit;
-                    distanctolimit = (int) speedLimit.distance();
-                    targetspeedlimit = (int) speedLimit.speedLimit();
+                    distanctolimit = (int) speedLimit.getDistance();
+                    targetspeedlimit = (int) speedLimit.getSpeedLimit();
                 }
             }
-            if(speedLimit.distance()<5){
-                trackspeedlimit = (int)speedLimit.speedLimit();
+            if(speedLimit.getDistance()<5){
+                trackspeedlimit = (int)speedLimit.getSpeedLimit();
             }
 
         }
@@ -644,7 +629,22 @@ public class ETCS {
         cachedWarningBrakingDist = calculateStoppingDistance(currentSpeed, (float) (maxDeceleration * 0.5),targetspeed);
     }
 
-    public record SpeedLimit(double distance, double speedLimit) {
+    public static class SpeedLimit {
+        private final double distance;
+        private final double speedLimit;
+
+        public SpeedLimit(double distance, double speedLimit) {
+            this.distance = distance;
+            this.speedLimit = speedLimit;
+        }
+
+        public double getDistance() {
+            return distance;
+        }
+
+        public double getSpeedLimit() {
+            return speedLimit;
+        }
     }
 
     /**
@@ -681,8 +681,7 @@ public class ETCS {
                 cachedSpeedLimits,
                 zoom,
                 pendingBeepSound,
-                distanceToBrakingPoint,
-                toUpdate
+                distanceToBrakingPoint
         );
 
         // Send to all players
@@ -694,7 +693,7 @@ public class ETCS {
     public void updateFromNetwork(double distanceToSignal, double speedLimit, float needleRotation, boolean backward,
                                   double emergencyBrakingDist, double serviceBrakingDist, double warningBrakingDist,
                                   boolean curveIsDropping, List<SpeedLimit> speedLimits, int zoom,
-                                  boolean newRouteSound, double distanceToBrakingPoint, boolean toUpdate) {
+                                  boolean newRouteSound, double distanceToBrakingPoint) {
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
         this.needleRotationDegrees = needleRotation;
@@ -715,7 +714,6 @@ public class ETCS {
         this.lastUpdateTime = System.currentTimeMillis();
         // Clear the sync flag since we just received fresh data
         this.needsSync = false;
-        this.toUpdate = toUpdate;
     }
 
     /**
@@ -747,8 +745,8 @@ public class ETCS {
         for (int i = 0; i < cachedSpeedLimits.size(); i++) {
             SpeedLimit limit = cachedSpeedLimits.get(i);
             CompoundTag limitTag = new CompoundTag();
-            limitTag.putDouble("distance", limit.distance());
-            limitTag.putDouble("speed", limit.speedLimit());
+            limitTag.putDouble("distance", limit.getDistance());
+            limitTag.putDouble("speed", limit.getSpeedLimit());
             speedLimitsTag.put("limit" + i, limitTag);
         }
         etcsData.put("speedLimits", speedLimitsTag);
