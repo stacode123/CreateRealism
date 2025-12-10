@@ -2,8 +2,14 @@ package net.Realism.trains.etcs;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
+import org.joml.Matrix4f;
 
 public class ETCStools {
     /**
@@ -17,7 +23,7 @@ public class ETCStools {
         if (speedKmh <= 200f) {
             rotationDegrees = -151.5f + (0.9f) * speedKmh;
         } else if (speedKmh >= 420f) {
-            rotationDegrees = 138.5f
+            rotationDegrees = 138.5f;
         } else {
             rotationDegrees = 28.5f + ((0.5f) * (speedKmh - 200f));
         }
@@ -30,7 +36,7 @@ public class ETCStools {
         graphics.blit(path, x, y, 0, 0, width, height, width, height);
     }
 
-    public static void optimizedRenderSpeedCurve(GuiGraphics graphics, PoseStack poseStack, int centerX, int centerY, double maxSpeed , int color) {
+    public static void optimizedRenderSpeedCurve(GuiGraphics graphics, PoseStack poseStack, int centerX, int centerY, double maxSpeed, int color) {
         // Arc parameters
         int radius = 115;
         int arcWidth = 7;
@@ -39,104 +45,81 @@ public class ETCStools {
         float startAngleRad = -233.5f * (float)(Math.PI / 180);
         float endAngleRad;
 
-        if(maxSpeed > 400) {
-            maxSpeed = 400;
+        if(maxSpeed > 420) {
+            maxSpeed = 420;
         }
-
         if (maxSpeed <= 200) {
             endAngleRad = (float) ((-233.5f + (0.9f * maxSpeed)) * (float)(Math.PI / 180));
         } else {
             endAngleRad = (float) ((-53.5f + (0.5f * (maxSpeed - 200f))) * (float)(Math.PI / 180));
         }
 
-        // Use more segments for smoother arc
-        int segments = 50;
+        // Extract color components
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+
+        // Use fewer segments - GPU interpolation will smooth it out
+        int segments = 64;
 
         poseStack.pushPose();
         poseStack.translate(centerX, centerY, 0);
+        Matrix4f matrix = poseStack.last().pose();
 
-        // Draw the arc as a filled region
-        for (int w = 0; w <= arcWidth; w++) {
-            float r = radius - w;
-            float prevX = (float)Math.cos(startAngleRad) * r;
-            float prevY = (float)Math.sin(startAngleRad) * r;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
-            for (int i = 1; i <= segments; i++) {
-                float ratio = (float)i / segments;
-                float angle = startAngleRad + (endAngleRad - startAngleRad) * ratio;
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buffer = tesselator.getBuilder();
 
-                float x = (float)Math.cos(angle) * r;
-                float y = (float)Math.sin(angle) * r;
+        // Draw arc as a triangle strip
+        buffer.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
 
-                // Draw line from previous point to current point
-                drawLine(graphics, (int)prevX, (int)prevY, (int)x, (int)y, color);
+        for (int i = 0; i <= segments; i++) {
+            float ratio = (float)i / segments;
+            float angle = startAngleRad + (endAngleRad - startAngleRad) * ratio;
 
-                prevX = x;
-                prevY = y;
-            }
+            float cos = (float)Math.cos(angle);
+            float sin = (float)Math.sin(angle);
+
+            // Outer vertex
+            float outerX = cos * radius;
+            float outerY = sin * radius;
+            buffer.vertex(matrix, outerX, outerY, 0).color(r, g, b, a).endVertex();
+
+            // Inner vertex
+            float innerX = cos * (radius - arcWidth);
+            float innerY = sin * (radius - arcWidth);
+            buffer.vertex(matrix, innerX, innerY, 0).color(r, g, b, a).endVertex();
         }
 
-        // Add a 16 pixel wide indicator extending inward at the end of the arc
-        float endX = (float)Math.cos(endAngleRad) * (radius - (float) arcWidth /2);
-        float endY = (float)Math.sin(endAngleRad) * (radius - (float) arcWidth /2);
+        tesselator.end();
 
-        // Calculate the inner point 16 pixels inward
+        // Draw the inward indicator at the end
+        float endX = (float)Math.cos(endAngleRad) * (radius - (float) arcWidth / 2);
+        float endY = (float)Math.sin(endAngleRad) * (radius - (float) arcWidth / 2);
         float innerEndX = (float)Math.cos(endAngleRad) * (radius - arcWidth - 16);
         float innerEndY = (float)Math.sin(endAngleRad) * (radius - arcWidth - 16);
 
-        // Draw the inward indicator
-        for (int i = 0; i < 16; i++) {
-            float offsetX = i * (innerEndX - endX) / 16;
-            float offsetY = i * (innerEndY - endY) / 16;
-            drawLine(graphics,
-                    (int)(endX + offsetX - 2), (int)(endY + offsetY - 2),
-                    (int)(endX + offsetX + 2), (int)(endY + offsetY + 2),
-                    color);
-        }
+        // Calculate perpendicular for width
+        float perpX = -(endY - innerEndY);
+        float perpY = (endX - innerEndX);
+        float perpLen = (float)Math.sqrt(perpX * perpX + perpY * perpY);
+        perpX = (perpX / perpLen) * 2; // 4 pixel width (2 on each side)
+        perpY = (perpY / perpLen) * 2;
+
+        buffer.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        buffer.vertex(matrix, endX + perpX, endY + perpY, 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, endX - perpX, endY - perpY, 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, innerEndX + perpX, innerEndY + perpY, 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, innerEndX - perpX, innerEndY - perpY, 0).color(r, g, b, a).endVertex();
+        tesselator.end();
+
+        RenderSystem.disableBlend();
 
         poseStack.popPose();
-    }
-
-    private static void drawLine(GuiGraphics graphics, int x1, int y1, int x2, int y2, int color) {
-        // For horizontal lines
-        if (y1 == y2) {
-            int minX = Math.min(x1, x2);
-            int maxX = Math.max(x1, x2);
-            graphics.fill(minX, y1, maxX + 1, y1 + 1, color);
-            return;
-        }
-
-        // For vertical lines
-        if (x1 == x2) {
-            int minY = Math.min(y1, y2);
-            int maxY = Math.max(y1, y2);
-            graphics.fill(x1, minY, x1 + 1, maxY + 1, color);
-            return;
-        }
-
-        // For diagonal lines, use Bresenham's algorithm
-        int dx = Math.abs(x2 - x1);
-        int dy = Math.abs(y2 - y1);
-        int sx = x1 < x2 ? 1 : -1;
-        int sy = y1 < y2 ? 1 : -1;
-        int err = dx - dy;
-
-        while (true) {
-            graphics.fill(x1, y1, x1 + 1, y1 + 1, color);
-
-            if (x1 == x2 && y1 == y2)
-                break;
-
-            int e2 = 2 * err;
-            if (e2 > -dy) {
-                err -= dy;
-                x1 += sx;
-            }
-            if (e2 < dx) {
-                err += dx;
-                y1 += sy;
-            }
-        }
     }
 
 
@@ -145,4 +128,3 @@ public class ETCStools {
 
 
 }
-
