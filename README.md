@@ -9,6 +9,7 @@
 #### Features:
 
 #### ETCS - Signal and track clearance
+##### now using a new DMI support 400kph
 
 The mod also adds a Overlay when manually riding thrains that show the free track in front of the train,Braking curves to show when to start slwoing down and speed limits(IF Create: Tramways is installed) ![A Overlay witha speedmometer and a track status overview](https://cdn.modrinth.com/data/cached_images/d96cc5469b7b8035e1e116b6ea81f6e2e388c829_0.webp)
 
