@@ -1,4 +1,3 @@
-## NOT CURRENTLY WORKING ON CREATE 6.0
 
 # Create Realism
 
