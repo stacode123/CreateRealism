@@ -37,7 +37,7 @@ side="BOTH"
 [[dependencies.realism]]
 modId="tramways"
 mandatory=false
-versionRange="[${tramways_version},)"
+versionRange="[0.3.2,)"
 ordering="AFTER"
 side="BOTH"
 
@@ -45,5 +45,12 @@ side="BOTH"
 modId="architectury"
 mandatory=true
 versionRange="[${architectury_api_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="dragonlib"
+mandatory=true
+versionRange="[${dragonlib_version},)"
 ordering="NONE"
 side="BOTH"

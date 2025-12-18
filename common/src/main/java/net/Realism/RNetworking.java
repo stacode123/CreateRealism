@@ -1,16 +1,17 @@
 package net.Realism;
 
+import com.simibubi.create.Create;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import io.netty.buffer.Unpooled;
-import net.Realism.network.ETCSStartStopPacket;
-import net.Realism.network.ETCSSyncPacket;
-import net.Realism.network.SteerDirectionPacket;
+import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.network.*;
 import net.Realism.util.C2SPacket;
 import net.Realism.util.S2CPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -46,9 +47,10 @@ public class RNetworking {
                     return;
 
                 mc.getConnection().onDisconnect(
-                        Component.literal(
-                                "Create: Tramways network versions do not match! Server expected %s, client has %s"
-                                        .formatted(serverVersion, RNetworking.VERSION)
+                        Component.translatable(
+                                "realism.network.version_mismatch",
+                                serverVersion,
+                                RNetworking.VERSION
                         )
                 );
             }
@@ -104,6 +106,15 @@ public class RNetworking {
 
     public static void onPlayerJoin(ServerPlayer player) {
         sendToPlayer(new CheckVersionS2CPacket(RNetworking.VERSION), player);
+        MinecraftServer server = player.server;
+        server.getAllLevels().forEach((level) -> {
+        Create.RAILWAYS.sided(level).trains.forEach((uuid, train) -> {
+            if (train == null) return;
+            if (train instanceof ITrainInterface Rtrain) {
+                RNetworking.sendToPlayer(new TrainSettingsUpdatePacket(Rtrain.realism$getSettings(), train.id), player);
+            }
+            });
+        });
     }
 
     @ExpectPlatform
@@ -145,6 +156,17 @@ public class RNetworking {
                 ETCSStartStopPacket::read
 
         );
-
+        registerS2C(
+                RollSyncPacket.class,
+                RollSyncPacket::read
+        );
+        registerC2S(
+                TrainSettingsSavePacket.class,
+                TrainSettingsSavePacket::read
+        );
+        registerS2C(
+                TrainSettingsUpdatePacket.class,
+                TrainSettingsUpdatePacket::read
+        );
     }
 }

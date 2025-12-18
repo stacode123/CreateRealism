@@ -7,7 +7,7 @@ import com.simibubi.create.content.trains.track.TrackPlacementOverlay;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrackPlacementInterface;
 import net.Realism.Interfaces.ITrackPlacementMixin;
-import net.Realism.mixinaccesors.PlacementInfoAccessor;
+import net.Realism.mixin.mixinaccesors.PlacementInfoAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
@@ -46,18 +46,22 @@ public class TrackPlacementOverlayMixin {
         if (radius > 90) {
             radius = 90;
         }
-        MutableComponent radiusText = Component.literal(Math.round(mxspeed * radius / 90) + "km/h" + " " + Math.round(mxspeed * handleLength / 45 / mxspeed * 100) + "%");
+        int speedVal = Math.round(mxspeed * (radius > 0 ? (float) (radius / 90f) : (float) (handleLength / 45f)));
+        int percentVal = Math.round((mxspeed * (radius > 0 ? (float) (handleLength / 45f) : (float) (handleLength / 45f)) / mxspeed) * 100);
+        MutableComponent radiusText = Component.translatable("realism.overlay.speed_and_percent", speedVal, percentVal);
         if (radius == 0) {
             if (handleLength > 45) {
                 handleLength = 45;
             }
-            radiusText = Component.literal(Math.round(mxspeed * handleLength / 45) + "km/h" + " " + Math.round(mxspeed * handleLength / 45 / mxspeed * 100) + "%");
+            int speedVal2 = Math.round(mxspeed * (float) (handleLength / 45f));
+            int percentVal2 = Math.round((mxspeed * (float) (handleLength / 45f) / mxspeed) * 100);
+            radiusText = Component.translatable("realism.overlay.speed_and_percent", speedVal2, percentVal2);
         }
         if (Straight) {
             return;
         }
         if (Slope) {
-            radiusText = Component.literal(Math.round(mxspeed) + "km/h" + " 100%");
+            radiusText = Component.translatable("realism.overlay.speed_and_percent", Math.round(mxspeed), 100);
         }
         int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
         int radiusY = window.getGuiScaledHeight() - 40;
@@ -71,7 +75,7 @@ public class TrackPlacementOverlayMixin {
 
         ITrackPlacementInterface mixin = (ITrackPlacementInterface) TrackPlacement.cached;
         double grade = mixin.getGrade();
-        MutableComponent gradeText = Component.literal(Math.round(grade * 100) + "%");
+        MutableComponent gradeText = Component.translatable("realism.overlay.grade_percent", Math.round(grade * 100));
         int gradeX = (window.getGuiScaledWidth() - gui.getFont().width(gradeText)) / 2;
         int gradeY = window.getGuiScaledHeight() - 50; // Adjusted position
         graphics.drawString(gui.getFont(), gradeText, gradeX, gradeY, 0xFFFFFF, false);

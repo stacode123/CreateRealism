@@ -32,8 +32,10 @@ public abstract class TrainHudMixin {
     )
     private static void afterPoseStackTranslate(ForgeGui gui, GuiGraphics graphics, float partialTicks,
                                                 int width, int height, CallbackInfo ci) {
-        if(getCarriage().train instanceof ITrainInterface RTrain&& RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get()) {
-            RTrain.realism$getETCS().render(graphics);}
+        if(!(getCarriage().train instanceof ITrainInterface Rtrain)){
+            return;}
+        if(RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get() && Rtrain.realism$getETCS() != null) {
+            Rtrain.realism$getETCS().render(graphics);}
     }
 
 }

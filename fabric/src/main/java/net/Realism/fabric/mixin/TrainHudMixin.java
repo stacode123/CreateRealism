@@ -30,7 +30,7 @@ public abstract class TrainHudMixin {
     ))
     private static void injectAfterDirectionTranslate(GuiGraphics graphics, float partialTicks,
                                                       Window window, CallbackInfo ci) {
-        if(getCarriage().train instanceof ITrainInterface RTrain&& RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get()) {
+        if(getCarriage().train instanceof ITrainInterface RTrain&& RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get() && RTrain.realism$getETCS() != null) {
         RTrain.realism$getETCS().render(graphics);}
     }
 }

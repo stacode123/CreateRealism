@@ -1,4 +1,4 @@
-package net.Realism.mixinaccesors;
+package net.Realism.mixin.mixinaccesors;
 
 
 import net.minecraft.core.BlockPos;

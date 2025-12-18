@@ -8,8 +8,10 @@ import com.simibubi.create.content.trains.graph.TrackGraph;
 import com.simibubi.create.content.trains.schedule.ScheduleRuntime;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
-import net.Realism.debug.RealismDebuger;
+import net.Realism.network.TrainSettingsUpdatePacket;
+import net.Realism.trains.TrainSettings;
 import net.Realism.trains.etcs.ETCS;
 import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,6 +39,14 @@ public abstract class TrainMixin implements ITrainInterface {
     @Shadow public ScheduleRuntime runtime;
     @Shadow public TrainStatus status;
     @Shadow public boolean manualTick;
+
+    @Unique
+    TrainSettings realism$Settings = new TrainSettings();
+    @Unique
+    public void realism$setSettings(TrainSettings tiltSetting) {this.realism$Settings = tiltSetting;}
+    @Unique
+    public TrainSettings realism$getSettings() {return this.realism$Settings;}
+
     @Unique
     public ETCS realism$etcs = null;
 
@@ -60,13 +70,18 @@ public abstract class TrainMixin implements ITrainInterface {
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
     private void write(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
+        CompoundTag tag =  cir.getReturnValue();
         if (this.realism$etcs != null) {
-            CompoundTag tag =  cir.getReturnValue();
             tag.put("ETCS", this.realism$etcs.saveToNBT());
-            cir.setReturnValue(tag);
+
         }
+        if (this.realism$Settings != null) {
+            cir.getReturnValue().put("trainSettings", this.realism$Settings.savetoNBT());
+        }
+        cir.setReturnValue(tag);
 
     }
+
     @Inject(method = "read", at = @At("RETURN"), cancellable = true)
     private static void onTrainRead(CompoundTag tag, Map<UUID, TrackGraph> trackNetworks,
                                     DimensionPalette dimensions, CallbackInfoReturnable<Train> cir) {
@@ -76,6 +91,12 @@ public abstract class TrainMixin implements ITrainInterface {
             ((ITrainInterface)original).realism$setETCS(new ETCS(original));
             ((ITrainInterface)original).realism$getETCS().loadFromNBT(customDataTag);
         }
+        if (tag.contains("trainSettings")) {
+            CompoundTag tiltTag = tag.getCompound("trainSettings");
+            ((ITrainInterface)original).realism$setSettings(TrainSettings.fromNBT(tiltTag));
+            RNetworking.sendToAll(new TrainSettingsUpdatePacket(((ITrainInterface)original).realism$getSettings(), original.id));
+        }
+
     }
 
     /**
@@ -85,28 +106,33 @@ public abstract class TrainMixin implements ITrainInterface {
 
     @Overwrite()
     public float acceleration() {
-        if (!RealismConfig.COMMON.EnableCustomTrainAcceleration.get()) {
+        if (!RealismConfig.COMMON.EnableCustomTrainAcceleration.get() || this.realism$Settings.isAccelerationNone()) {
             return (fuelTicks > 0 ? AllConfigs.server().trains.poweredTrainAcceleration.getF()
                     : AllConfigs.server().trains.trainAcceleration.getF()) / 400;
         }
-        float ac = (fuelTicks > 0 ? AllConfigs.server().trains.poweredTrainAcceleration.getF() : AllConfigs.server().trains.trainAcceleration.getF()) / 400;
-        int locomotives = 0;
-        for (Carriage carriage : carriages) {
-            if (carriage.presentConductors.either(b -> b)) {
-                locomotives++;
+
+        if (this.realism$Settings.isAccelerationRealistic()) {
+            float ac = (fuelTicks > 0 ? AllConfigs.server().trains.poweredTrainAcceleration.getF() : AllConfigs.server().trains.trainAcceleration.getF()) / 400;
+            int locomotives = 0;
+            for (Carriage carriage : carriages) {
+                if (carriage.presentConductors.either(b -> b)) {
+                    locomotives++;
+                }
             }
-        }
-        if (locomotives == 0) locomotives = 1;
-        float reduce = (float) ((carriages.size() * 0.0002f * RealismConfig.COMMON.CustomTrainAccelerationMultiplyer.get() ) / locomotives);
-        ac -= reduce;
-        if (ac < 0) ac = 0.0001f;
+            if (locomotives == 0) locomotives = 1;
+            float reduce = (float) ((carriages.size() * 0.0002f * RealismConfig.COMMON.CustomTrainAccelerationMultiplyer.get()) / locomotives);
+            ac -= reduce;
+            if (ac < 0) ac = 0.0001f;
 
-        if(RealismConfig.CLIENT.debugMode.get()) {
-            // Send data to the debug logger instead of printing directly
-            RealismDebuger.getInstance().addDebugInfo(ac*400, carriages.size(), locomotives );
+
+
+            return ac;
+        }
+        else{
+            return (float) this.realism$Settings.customAcceleration/400;
         }
 
-        return ac;
+
     }
 
 

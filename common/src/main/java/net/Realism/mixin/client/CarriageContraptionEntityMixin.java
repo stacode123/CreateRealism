@@ -1,4 +1,4 @@
-package net.Realism.mixin;
+package net.Realism.mixin.client;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
@@ -15,7 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = CarriageContraptionEntity.class)
 public class CarriageContraptionEntityMixin {
 
-    @Shadow private Carriage carriage;
+    @Shadow
+    private Carriage carriage;
 
     @Inject(method = "startControlling", at = @At("RETURN"), cancellable = true)
     private void afterStartControlling(BlockPos controlsLocalPos, Player player, CallbackInfoReturnable<Boolean> cir) {
@@ -29,7 +30,5 @@ public class CarriageContraptionEntityMixin {
             }
         }
     }
-
-
 
 }

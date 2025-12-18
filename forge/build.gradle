@@ -48,7 +48,9 @@ dependencies {
     modRuntimeOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge")
 
     modImplementation "dev.architectury:architectury-forge:$rootProject.architectury_api_version"
-}
+    modImplementation("de.mrjulsen.mcdragonlib:dragonlib-forge:$minecraft_version-$dragonlib_version")
+
+    modImplementation("curse.maven:journeymap-32274:5457831")}
 
 processResources {
     Map<String, String> properties = Map.of(
@@ -58,7 +60,8 @@ processResources {
             "minecraft_version", minecraft_version,
             "create_version", create_forge_version.split("-")[0],
             "tramways_version", tramways_version,
-            "architectury_api_version", architectury_api_version
+            "architectury_api_version", architectury_api_version,
+            "dragonlib_version", dragonlib_version
     ) as Map<String, String>
     properties.forEach((k, v) -> inputs.property(k, v))
 
@@ -116,26 +119,30 @@ publishMods {
     changelog = rootProject.file("CHANGELOG.md").text
 
     curseforge {
-        displayName = "${mod_version}+forge-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = curseforge_id
         accessToken = System.getenv("CURSEFORGE_TOKEN")
         minecraftVersions.add(minecraft_version)
         modLoaders.add("forge")
+        modLoaders.add("neoforge")
 
         requires("create")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
 
     modrinth {
-        displayName = "${mod_version}+forge-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = modrinth_id
         accessToken = System.getenv("MODRINTH_TOKEN")
         minecraftVersions.add(minecraft_version)
         modLoaders.add("forge")
+        modLoaders.add("neoforge")
 
         requires("create")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
 }

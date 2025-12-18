@@ -20,6 +20,7 @@ loom {
             vmArg("-Dfabric-api.datagen.output-dir=${project(":common").file("src/generated/resources")}")
             vmArg("-Dporting_lib.datagen.existing_resources=${project(":common").file("src/main/resources")}")
 
+
             environmentVariable("DATAGEN", "TRUE")
         }
     }
@@ -50,7 +51,7 @@ dependencies {
     implementation(shadowCommon("javazoom:jlayer:${jlayer_version}"))
 
     // Create - dependencies are added transitively
-    modImplementation("com.simibubi.create:create-fabric-${minecraft_version}:${create_fabric_version}")
+    modImplementation("com.simibubi.create:create-fabric:${create_fabric_version}-mc${minecraft_version}")
 
     // Development QOL
     modLocalRuntime("maven.modrinth:lazydfu:${lazydfu_version}")
@@ -65,8 +66,11 @@ dependencies {
     }
     modCompileOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
     modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
+    //modImplementation("curse.maven:journeymap-32274:5789354")
 
     modImplementation "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
+
+    modImplementation(include("de.mrjulsen.mcdragonlib:dragonlib-fabric:$minecraft_version-$dragonlib_version"))
 }
 
 processResources {
@@ -79,7 +83,8 @@ processResources {
             "minecraft_version", minecraft_version,
             "create_version", create_fabric_version,
             "tramways_version", tramways_version,
-            "architectury_version", architectury_api_version
+            "architectury_version", architectury_api_version,
+            "dragonlib_version", dragonlib_version
             //"railways_version", railways_fabric_version.split("\\+")[0]
     )
     properties.forEach((k, v) -> inputs.property(k, v))
@@ -128,7 +133,7 @@ publishMods {
     changelog = rootProject.file("CHANGELOG.md").text
 
     curseforge {
-        displayName = "${mod_version}+fabric-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = curseforge_id
         accessToken = System.getenv("CURSEFORGE_TOKEN")
         minecraftVersions.add(minecraft_version)
@@ -136,11 +141,12 @@ publishMods {
 
         requires("create-fabric")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
 
     modrinth {
-        displayName = "${mod_version}+fabric-${minecraft_version}"
+        displayName = file.map { it.asFile.name }
         projectId = modrinth_id
         accessToken = System.getenv("MODRINTH_TOKEN")
         minecraftVersions.add(minecraft_version)
@@ -148,6 +154,8 @@ publishMods {
 
         requires("create-fabric")
         requires("architectury-api")
+        requires("dragonlib")
         optional("tramways")
     }
+
 }
