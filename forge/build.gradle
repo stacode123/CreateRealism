@@ -48,7 +48,9 @@ dependencies {
     modRuntimeOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge")
 
     modImplementation "dev.architectury:architectury-forge:$rootProject.architectury_api_version"
-    modImplementation(include("de.mrjulsen.mcdragonlib:dragonlib-forge:$minecraft_version-$dragonlib_version"))}
+    modImplementation("de.mrjulsen.mcdragonlib:dragonlib-forge:$minecraft_version-$dragonlib_version")
+
+    modImplementation("curse.maven:journeymap-32274:5457831")}
 
 processResources {
     Map<String, String> properties = Map.of(

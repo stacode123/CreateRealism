@@ -1,7 +1,7 @@
 package net.Realism.gui;
 
 
-import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLScreenWrapper;
+import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLScreen;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLWindowManager;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.WindowBuilder;
 import net.Realism.Interfaces.IRealismScreens;
@@ -11,7 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class RealismScreens extends Screen implements IRealismScreens {
-    private DLScreenWrapper wrapper;
+    private DLScreen wrapper;
 
     public RealismScreens() {
         super(Component.translatable("realism.screen.title"));
@@ -22,8 +22,8 @@ public class RealismScreens extends Screen implements IRealismScreens {
         // Create a WindowBuilder that constructs your main window
         WindowBuilder<TrainSettingsGui> builder = (manager) -> new TrainSettingsGui(manager, Rtrain);
 
-        // DLScreenWrapper creates and manages the DLWindowManager internally
-        wrapper = new DLScreenWrapper(
+        // DLScreen creates and manages the DLWindowManager internally
+        wrapper = new DLScreen(
                 null,
                 builder
         );

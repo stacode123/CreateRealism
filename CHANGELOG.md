@@ -15,3 +15,4 @@
 
 ## Bug Fixes
 - Fixed a bug where pressing shift would cause a crash.
+- Some other things i forgot to write down.

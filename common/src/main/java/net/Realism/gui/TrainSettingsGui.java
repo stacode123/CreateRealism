@@ -290,7 +290,7 @@ public class TrainSettingsGui extends DLWindow {
                 new DLRichTextLabel(195, 100, 200, 20)
         );
         CurrentAccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.default", AllConfigs.server().trains.trainAcceleration.get().toString()).getString());
-
+        CurrentAccelerationLabel.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);
 
 
 
