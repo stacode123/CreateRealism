@@ -28,7 +28,7 @@ public abstract class OrientedContraptionEntityRenderMixin {
 
         // Only apply roll if it's non-zero
         if (Math.abs(angleRoll) > 0.001f) {
-            TransformStack.of(matrixStack).rotateZ(-(float) Math.toRadians(angleRoll));
+            TransformStack.of(matrixStack).rotateX((float) Math.toRadians(angleRoll));
 
         }
         String debug = String.format("Roll angle: %.2f", angleRoll);
