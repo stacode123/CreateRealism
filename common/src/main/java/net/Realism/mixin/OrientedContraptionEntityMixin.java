@@ -2,9 +2,11 @@ package net.Realism.mixin;
 
 import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,7 +19,10 @@ import java.util.UUID;
  */
 @Mixin(value = OrientedContraptionEntity.class, remap = false)
 public abstract class OrientedContraptionEntityMixin implements IOrientedContraptionEntity {
-    
+
+    @Shadow
+    public abstract float getInitialYaw();
+
     @Unique
     private float realism$roll = 0;
     
@@ -57,6 +62,13 @@ public abstract class OrientedContraptionEntityMixin implements IOrientedContrap
     @Unique
     public float realism$getViewRoll(float partialTicks) {
         return Mth.lerp(partialTicks, realism$prevRoll, realism$roll);
+    }
+
+    @Override
+    @Unique
+    public Direction realism$getInitialDirection() {
+        float yaw = this.getInitialYaw();
+        return Direction.fromYRot(yaw);
     }
 
     /**

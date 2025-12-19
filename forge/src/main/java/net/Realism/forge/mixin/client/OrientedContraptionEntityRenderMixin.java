@@ -5,6 +5,7 @@ import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import dev.engine_room.flywheel.lib.transform.TransformStack;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
 import net.Realism.debug.RealismDebuger;
+import net.minecraft.core.Direction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -28,7 +29,18 @@ public abstract class OrientedContraptionEntityRenderMixin {
 
         // Only apply roll if it's non-zero
         if (Math.abs(angleRoll) > 0.001f) {
-            TransformStack.of(matrixStack).rotateX((float) Math.toRadians(angleRoll));
+            if (orientedEntity.realism$getInitialDirection() == Direction.NORTH) {
+                TransformStack.of(matrixStack).rotateX((float) Math.toRadians(angleRoll));
+            }
+            else if (orientedEntity.realism$getInitialDirection() == Direction.SOUTH) {
+                TransformStack.of(matrixStack).rotateX(-(float) Math.toRadians(angleRoll));
+            }
+            else if (orientedEntity.realism$getInitialDirection() == Direction.EAST) {
+                TransformStack.of(matrixStack).rotateZ((float) Math.toRadians(angleRoll));
+            }
+            else if (orientedEntity.realism$getInitialDirection() == Direction.WEST) {
+                TransformStack.of(matrixStack).rotateZ(-(float) Math.toRadians(angleRoll));
+            }
 
         }
         String debug = String.format("Roll angle: %.2f", angleRoll);

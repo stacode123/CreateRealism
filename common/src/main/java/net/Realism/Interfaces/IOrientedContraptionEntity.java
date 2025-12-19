@@ -1,5 +1,7 @@
 package net.Realism.Interfaces;
 
+import net.minecraft.core.Direction;
+
 import java.util.UUID;
 
 /**
@@ -32,6 +34,8 @@ public interface IOrientedContraptionEntity {
      * @return Interpolated roll angle
      */
     float realism$getViewRoll(float partialTicks);
+
+    public Direction realism$getInitialDirection();
 
     UUID getuid();
 }
