@@ -1,2 +1,2 @@
-## 0.6.1
-- Fix orientation on tilting
+## 0.6.2
+- Actually fix orientation this time
