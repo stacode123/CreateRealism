@@ -132,7 +132,6 @@ public abstract class TrainMixin implements ITrainInterface {
             return (float) this.realism$Settings.customAcceleration/400;
         }
 
-
     }
 
 

@@ -2,7 +2,10 @@ package net.Realism.forge;
 
 import dev.architectury.platform.forge.EventBuses;
 import net.Realism.RealismMod;
+import net.Realism.commands.RealismCommands;
 import net.Realism.forge.config.ForgeConfigRegistration;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -17,6 +20,10 @@ public class RealismModForge {
         RealismMod.init();
         eventBus.addListener(this::commonSetup);
         ForgeConfigRegistration.register();
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+    }
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        RealismCommands.register(event.getDispatcher());
     }
     public void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
