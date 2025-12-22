@@ -1,9 +1,9 @@
 package net.Realism.forge;
 
-import net.Realism.RealismMod;
-import net.Realism.util.C2SPacket;
 import net.Realism.RNetworking;
-import net.Realism.util.S2CPacket;
+import net.Realism.RealismMod;
+import net.Realism.foundation.util.C2SPacket;
+import net.Realism.foundation.util.S2CPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;

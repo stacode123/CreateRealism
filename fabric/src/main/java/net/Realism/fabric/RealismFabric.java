@@ -2,8 +2,8 @@ package net.Realism.fabric;
 
 import io.github.fabricators_of_create.porting_lib.util.EnvExecutor;
 import net.Realism.RealismMod;
-import net.Realism.commands.RealismCommands;
 import net.Realism.fabric.config.FabricConfigRegistration;
+import net.Realism.foundation.commands.RealismCommands;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;

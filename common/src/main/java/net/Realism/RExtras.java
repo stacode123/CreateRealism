@@ -2,7 +2,7 @@ package net.Realism;
 
 import com.simibubi.create.content.trains.schedule.condition.ScheduleWaitCondition;
 import com.simibubi.create.content.trains.schedule.destination.ScheduleInstruction;
-import net.Realism.trains.schedule.TimeOfDayRealistic;
+import net.Realism.content.trains.schedule.TimeOfDayRealistic;
 import net.createmod.catnip.data.Pair;
 
 import java.util.function.Supplier;

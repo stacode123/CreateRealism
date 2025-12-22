@@ -3,7 +3,7 @@ package net.Realism.mixin.client;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.ITrainInterface;
-import net.Realism.trains.etcs.ETCS;
+import net.Realism.content.trains.etcs.ETCS;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;

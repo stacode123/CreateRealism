@@ -4,9 +4,9 @@ import com.simibubi.create.content.trains.entity.Train;
 import net.Realism.Interfaces.ITramSignPoint;
 import net.Realism.RealismExpectPlatform;
 import net.Realism.RealismMod;
+import net.Realism.content.trains.SignalFinder;
+import net.Realism.content.trains.etcs.ETCS;
 import net.Realism.mixin.mixinaccesors.TramSignDataAccessor;
-import net.Realism.trains.SignalFinder;
-import net.Realism.trains.etcs.ETCS;
 import net.createmod.catnip.data.Couple;
 import net.minecraft.nbt.CompoundTag;
 import purplecreate.tramways.content.signs.TramSignPoint;
@@ -154,7 +154,7 @@ public class TramwaysCompat {
     // Only loaded if Tramways exists
     private static class TramwaysCompatImpl {
         static Object createTramSignInfo(UUID signId, double distance, Object signType, boolean primary) {
-            return new net.Realism.trains.SignalFinder.TramSignInfo(
+            return new SignalFinder.TramSignInfo(
                     signId, distance, signType, primary);
         }
 

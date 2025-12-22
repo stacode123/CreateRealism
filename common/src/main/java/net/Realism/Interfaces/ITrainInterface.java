@@ -1,7 +1,7 @@
 package net.Realism.Interfaces;
 
-import net.Realism.trains.TrainSettings;
-import net.Realism.trains.etcs.ETCS;
+import net.Realism.content.trains.TrainSettings;
+import net.Realism.content.trains.etcs.ETCS;
 
 public interface ITrainInterface{
     ETCS realism$getETCS();

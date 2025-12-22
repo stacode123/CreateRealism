@@ -2,8 +2,8 @@ package net.Realism.forge;
 
 import dev.architectury.platform.forge.EventBuses;
 import net.Realism.RealismMod;
-import net.Realism.commands.RealismCommands;
 import net.Realism.forge.config.ForgeConfigRegistration;
+import net.Realism.foundation.commands.RealismCommands;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;

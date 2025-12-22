@@ -11,7 +11,7 @@ import net.Realism.Interfaces.IOrientedContraptionEntity;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
-import net.Realism.network.RollSyncPacket;
+import net.Realism.foundation.network.RollSyncPacket;
 import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.util.Mth;
