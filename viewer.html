@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Simulation Viewer</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; overflow: hidden; background: #f0f0f0; }
+        #controls { position: absolute; top: 10px; left: 10px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 100; }
+        #canvas-container { width: 100vw; height: 100vh; cursor: grab; }
+        #info { position: absolute; bottom: 10px; right: 10px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 300px; display: none; }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>Train Sim Viewer</h3>
+        <input type="file" id="fileInput" accept=".json">
+        <p><small>Load <code>simulation_state.json</code></small></p>
+        <div id="live-controls">
+            <label><input type="checkbox" id="liveToggle"> Live Mode (Polling)</label>
+            <button id="reloadBtn" style="display:none">Manual Reload</button>
+            <p id="liveNote" style="display:none"><small><em>Note: requires a web server to avoid CORS issues.</em></small></p>
+        </div>
+        <div id="stats"></div>
+    </div>
+    <div id="info"></div>
+    <div id="canvas-container">
+        <svg id="svg" width="100%" height="100%"></svg>
+    </div>
+
+    <script>
+        const svg = document.getElementById('svg');
+        const info = document.getElementById('info');
+        const stats = document.getElementById('stats');
+        let data = null;
+        let scale = 2.0;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                data = JSON.parse(e.target.result);
+                render();
+            };
+            reader.readAsText(file);
+        });
+
+        const liveToggle = document.getElementById('liveToggle');
+        const reloadBtn = document.getElementById('reloadBtn');
+        const liveNote = document.getElementById('liveNote');
+        let pollInterval = null;
+
+        async function fetchState() {
+            try {
+                const response = await fetch('simulation_state.json', { cache: 'no-store' });
+                if (response.ok) {
+                    data = await response.json();
+                    render();
+                } else {
+                    console.error("Failed to fetch state: " + response.statusText);
+                    if (liveToggle.checked) stopPolling("File 'simulation_state.json' not found or server unreachable.");
+                }
+            } catch (err) {
+                console.error("Fetch error:", err);
+                if (liveToggle.checked) stopPolling("CORS error or server unreachable. Live Mode requires serving this folder via a web server (e.g. Python's http.server or VSCode Live Server).");
+            }
+        }
+
+        function stopPolling(msg) {
+            liveToggle.checked = false;
+            reloadBtn.style.display = 'none';
+            liveNote.style.display = 'none';
+            clearInterval(pollInterval);
+            pollInterval = null;
+            if (msg) alert(msg);
+        }
+
+        liveToggle.addEventListener('change', () => {
+            if (liveToggle.checked) {
+                reloadBtn.style.display = 'inline';
+                liveNote.style.display = 'block';
+                fetchState();
+                pollInterval = setInterval(fetchState, 1000); // Poll every 1s
+            } else {
+                reloadBtn.style.display = 'none';
+                liveNote.style.display = 'none';
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        });
+
+        reloadBtn.addEventListener('click', fetchState);
+
+        function render() {
+            if (!data) return;
+            svg.innerHTML = '';
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            
+            let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+            data.graphs.forEach(graph => {
+                graph.nodes.forEach(node => {
+                    minX = Math.min(minX, node.x);
+                    minZ = Math.min(minZ, node.z);
+                    maxX = Math.max(maxX, node.x);
+                    maxZ = Math.max(maxZ, node.z);
+                });
+            });
+
+            const width = svg.clientWidth;
+            const height = svg.clientHeight;
+            
+            // Auto-center if first load
+            if (offsetX === 0 && offsetY === 0) {
+                offsetX = width / 2 - ((minX + maxX) / 2) * scale;
+                offsetY = height / 2 - ((minZ + maxZ) / 2) * scale;
+            }
+
+            g.setAttribute("transform", `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+
+            // Draw Edges
+            data.graphs.forEach(graph => {
+                const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+                graph.edges.forEach(edge => {
+                    const start = nodeMap.get(edge.start);
+                    const end = nodeMap.get(edge.end);
+                    if (!start || !end) return;
+
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", start.x);
+                    line.setAttribute("y1", start.z);
+                    line.setAttribute("x2", end.x);
+                    line.setAttribute("y2", end.z);
+                    
+                    let color = edge.type === 'CHAIN' ? 'orange' : '#666';
+                    if (edge.reservedBy) {
+                        // Color based on reservation
+                        color = 'rgba(255, 0, 0, 0.5)'; // Reddish for reserved
+                        
+                        // Check if it's reserved by a train currently on it
+                        const trainOnEdge = data.trains.find(t => t.reservedBy === t.id && t.edgeStart === edge.start && t.edgeEnd === edge.end);
+                        // Actually reservedBy is a train ID.
+                    }
+                    
+                    line.setAttribute("stroke", color);
+                    line.setAttribute("stroke-width", edge.reservedBy ? 3 / scale : 1 / scale);
+                    g.appendChild(line);
+
+                    edge.stations.forEach(station => {
+                        const ratio = station.location / edge.length;
+                        const sx = start.x + (end.x - start.x) * ratio;
+                        const sz = start.z + (end.z - start.z) * ratio;
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", sx - 1/scale);
+                        rect.setAttribute("y", sz - 1/scale);
+                        rect.setAttribute("width", 2/scale);
+                        rect.setAttribute("height", 2/scale);
+                        rect.setAttribute("fill", "green");
+                        rect.onmouseover = () => {
+                            info.style.display = 'block';
+                            info.innerHTML = `<strong>Station:</strong> ${station.name}<br><strong>ID:</strong> ${station.id.substring(0,8)}`;
+                        };
+                        g.appendChild(rect);
+                    });
+                });
+            });
+
+            // Draw Nodes
+            data.graphs.forEach(graph => {
+                graph.nodes.forEach(node => {
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", node.x);
+                    circle.setAttribute("cy", node.z);
+                    circle.setAttribute("r", 1.5 / scale);
+                    circle.setAttribute("fill", node.type === 'JUNCTION' ? 'blue' : 'red');
+                    g.appendChild(circle);
+                });
+            });
+
+            // Draw Trains
+            data.trains.forEach((train, index) => {
+                const graph = data.graphs.find(g => g.id === train.graphId);
+                const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+                const start = nodeMap.get(train.edgeStart);
+                const end = nodeMap.get(train.edgeEnd);
+                const edge = graph.edges.find(e => e.start === train.edgeStart && e.end === train.edgeEnd);
+                
+                if (start && end && edge) {
+                    const ratio = train.location / edge.length;
+                    const tx = start.x + (end.x - start.x) * ratio;
+                    const tz = start.z + (end.z - start.z) * ratio;
+                    
+                    const trainCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    trainCircle.setAttribute("cx", tx);
+                    trainCircle.setAttribute("cy", tz);
+                    trainCircle.setAttribute("r", 3 / scale);
+                    trainCircle.setAttribute("fill", "yellow");
+                    trainCircle.setAttribute("stroke", "black");
+                    trainCircle.setAttribute("stroke-width", 1 / scale);
+                    
+                    trainCircle.onmouseover = () => {
+                        info.style.display = 'block';
+                        info.innerHTML = `<strong>Train ${index + 1}</strong><br>
+                                         Speed: ${train.speed.toFixed(2)}<br>
+                                         Target: ${train.targetSpeed.toFixed(2)}<br>
+                                         Stops: ${train.timeBetweenStops.length}<br>
+                                         Avg Time: ${train.timeBetweenStops.length > 0 ? (train.timeBetweenStops.reduce((a,b)=>a+b,0)/train.timeBetweenStops.length).toFixed(0) : 0} ticks`;
+                    };
+                    g.appendChild(trainCircle);
+                }
+            });
+
+            svg.appendChild(g);
+            stats.innerHTML = `Graphs: ${data.graphs.length} | Trains: ${data.trains.length}`;
+        }
+
+        // Basic Pan/Zoom
+        let isPanning = false;
+        let startX, startY;
+
+        svg.onmousedown = (e) => { isPanning = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
+        window.onmousemove = (e) => { if (isPanning) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; render(); } };
+        window.onmouseup = () => { isPanning = false; };
+        svg.onwheel = (e) => {
+            e.preventDefault();
+            const zoom = e.deltaY > 0 ? 0.9 : 1.1;
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            
+            // Zoom towards mouse
+            offsetX = mouseX - (mouseX - offsetX) * zoom;
+            offsetY = mouseY - (mouseY - offsetY) * zoom;
+            scale *= zoom;
+            render();
+        };
+    </script>
+</body>
+</html>

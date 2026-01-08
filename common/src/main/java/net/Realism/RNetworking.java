@@ -168,5 +168,13 @@ public class RNetworking {
                 TrainSettingsUpdatePacket.class,
                 TrainSettingsUpdatePacket::read
         );
+        registerS2C(
+                OpenSimulatedSchedulePacket.class,
+                OpenSimulatedSchedulePacket::read
+        );
+        registerC2S(
+                SaveAdvancedSchedule.class,
+                SaveAdvancedSchedule::read
+        );
     }
 }

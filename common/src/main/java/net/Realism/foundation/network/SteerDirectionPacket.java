@@ -4,9 +4,9 @@ import net.Realism.foundation.util.C2SPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SteerDirectionPacket implements C2SPacket {
     // Define an enum for the key press types
@@ -17,7 +17,7 @@ public class SteerDirectionPacket implements C2SPacket {
     }
 
     // Static map to store player key presses
-    private static final Map<UUID, KeyPressType> playerKeyPresses = new HashMap<>();
+    private static final Map<UUID, KeyPressType> playerKeyPresses = new ConcurrentHashMap<>();
 
     // The key being pressed in this packet
     private final KeyPressType keyPress;

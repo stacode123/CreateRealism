@@ -49,8 +49,11 @@ public class GraphVisualizer {
 
         // Draw edges
         svg.append("  <defs>\n");
-        svg.append("    <marker id=\"arrowhead\" markerWidth=\"5\" markerHeight=\"3.5\" refX=\"5\" refY=\"1.75\" orient=\"auto\">\n");
+        svg.append("    <marker id=\"arrowhead_black\" markerWidth=\"5\" markerHeight=\"3.5\" refX=\"5\" refY=\"1.75\" orient=\"auto\">\n");
         svg.append("      <polygon points=\"0 0, 5 1.75, 0 3.5\" fill=\"black\" />\n");
+        svg.append("    </marker>\n");
+        svg.append("    <marker id=\"arrowhead_orange\" markerWidth=\"5\" markerHeight=\"3.5\" refX=\"5\" refY=\"1.75\" orient=\"auto\">\n");
+        svg.append("      <polygon points=\"0 0, 5 1.75, 0 3.5\" fill=\"orange\" />\n");
         svg.append("    </marker>\n");
         svg.append("  </defs>\n");
 
@@ -75,8 +78,11 @@ public class GraphVisualizer {
                 offsetZ = dx / len * offsetAmount;
             }
 
-            svg.append(String.format("  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"black\" stroke-width=\"0.3\" marker-end=\"url(#arrowhead)\" />\n",
-                    x1 + offsetX, z1 + offsetZ, x2 + offsetX, z2 + offsetZ));
+            String color = edge.type == BlockEdge.EdgeType.CHAIN ? "orange" : "black";
+            String markerId = edge.type == BlockEdge.EdgeType.CHAIN ? "arrowhead_orange" : "arrowhead_black";
+
+            svg.append(String.format("  <line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" stroke=\"%s\" stroke-width=\"0.3\" marker-end=\"url(#%s)\" />\n",
+                    x1 + offsetX, z1 + offsetZ, x2 + offsetX, z2 + offsetZ, color, markerId));
 
             // Draw station markers if present
             if (edge.stations != null && !edge.stations.isEmpty()) {

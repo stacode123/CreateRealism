@@ -9,16 +9,17 @@ import java.util.Map;
 import java.util.UUID;
 
 public class BlockGraphManager extends SavedData {
-    private Map<UUID,BlockGraph> Graphs;
+    private Map<UUID,BlockGraph> Graphs = new java.util.HashMap<>();
 
-    BlockGraph getGraph(UUID id){
+    public BlockGraph getGraph(UUID id){
         return Graphs.get(id);
     }
-    void UpdateGraph(UUID id, BlockGraph graph){
+
+    public void UpdateGraph(UUID id, BlockGraph graph){
         Graphs.put(id, graph);
     }
 
-    List<UUID> getGraphIds(){
+    public List<UUID> getGraphIds(){
         return List.copyOf(Graphs.keySet());
     }
 
@@ -38,4 +39,6 @@ public class BlockGraphManager extends SavedData {
         });
         return manager;
     }
+
+
 }

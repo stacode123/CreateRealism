@@ -12,7 +12,6 @@ public class BlockNode {
         JUNCTION, SIGNAL
     }
 
-
     public UUID id;
     public List<BlockEdge> connections;
     public Vec3 location;

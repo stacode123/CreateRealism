@@ -16,8 +16,10 @@ public class RealismModForge {
     public RealismModForge() {
         // registrate must be given the mod event bus on forge before registration
         IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        EventBuses.registerModEventBus(RealismMod.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
+        EventBuses.registerModEventBus(RealismMod.MOD_ID, eventBus);
+        RealismMod.REGISTRATE.registerEventListeners(eventBus);
         RealismMod.init();
+        RealismMod.commonSetup();
         eventBus.addListener(this::commonSetup);
         ForgeConfigRegistration.register();
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
@@ -28,7 +30,6 @@ public class RealismModForge {
     public void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             RNetworkingImpl.init();
-            RealismMod.commonSetup();
         });
 
     }

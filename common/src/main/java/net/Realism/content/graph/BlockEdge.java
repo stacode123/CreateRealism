@@ -10,11 +10,20 @@ public class BlockEdge {
     public List<BlockStation> stations;
     public int length;
 
-    public BlockEdge(BlockNode start, BlockNode end, List<BlockStation> stations, int length){
+    public enum EdgeType {
+        NORMAL, CHAIN
+    }
+
+    public EdgeType type;
+    public java.util.UUID reservedBy = null;
+    public BlockEdge opposite = null;
+
+    public BlockEdge(BlockNode start, BlockNode end, List<BlockStation> stations, int length, EdgeType type){
         this.start = start;
         this.end = end;
         this.length = length;
         this.stations = stations;
+        this.type = type;
     }
 
     public CompoundTag write() {
@@ -23,6 +32,7 @@ public class BlockEdge {
         nbt.putUUID("End", end.id);
         nbt.put("Stations", net.createmod.catnip.nbt.NBTHelper.writeCompoundList(stations, BlockStation::write));
         nbt.putInt("Length", length);
+        nbt.putString("Type", type.name());
 
         return nbt;
     }
@@ -32,6 +42,7 @@ public class BlockEdge {
         end = nodes.get(nbt.getUUID("End"));
         stations = new java.util.ArrayList<>();
         length = nbt.getInt("Length");
+        type = EdgeType.valueOf(nbt.getString("Type"));
         net.createmod.catnip.nbt.NBTHelper.iterateCompoundList(nbt.getList("Stations", 10), tag -> {
             BlockStation station = new BlockStation(this, null, null, graph, 0);
             station.read(tag, graph);

@@ -40,7 +40,7 @@ public final class BlockGraph {
 
         edges = new ArrayList<>();
         NBTHelper.iterateCompoundList(nbt.getList("Edges", 10), tag -> {
-            BlockEdge edge = new BlockEdge(null, null, new ArrayList<>(), 0);
+            BlockEdge edge = new BlockEdge(null, null, new ArrayList<>(), 0,null);
             edge.read(tag, nodeMap, this);
             edges.add(edge);
         });

@@ -11,6 +11,9 @@ import org.apache.commons.lang3.tuple.Triple;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static net.Realism.content.graph.GraphUtil.SignaltoEdgeType;
 
 
 public class GraphTranslator {
@@ -19,8 +22,8 @@ public class GraphTranslator {
 
     public BlockGraph translate(TrackGraph graph) {
         BlockGraph blockGraph = new BlockGraph(graph);
-        Map<Object, BlockNode> nodeMap = new HashMap<>();
-        Map<TrackNode, BlockNode> trackNodeMap = new HashMap<>();
+        Map<Object, BlockNode> nodeMap = new ConcurrentHashMap<>();
+        Map<TrackNode, BlockNode> trackNodeMap = new ConcurrentHashMap<>();
 
         Map<TrackNodeLocation, TrackNode> graphNodes = getGraphNodes(graph);
         if (graphNodes == null) return blockGraph;
@@ -101,7 +104,7 @@ public class GraphTranslator {
                     break;
                 }
             }
-            Map<SignalBoundary,Boolean> trackSignalMap = new HashMap<>();
+            Map<SignalBoundary,Boolean> trackSignalMap = new ConcurrentHashMap<>();
             for (TrackEdge trackEdge : path) {
                 TrackNode nextTempNode = trackEdge.node1.equals(tempNode) ? trackEdge.node2 : trackEdge.node1;
                 TrackNode finalTempNode = tempNode;
@@ -145,13 +148,12 @@ public class GraphTranslator {
                 }
             }
         }
-
+        TraverseAndFillChainSignals(blockGraph);
+        LinkOppositeEdges(blockGraph);
         GraphVisualizer.visualize(blockGraph, "debug_graph_" + blockGraph.id.toString().substring(0,5) + ".svg");
 
         return blockGraph;
     }
-
-
 
     private Vec3 getSignalLocation(TrackGraph graph, SignalBoundary signal) {
         Map<TrackNodeLocation, TrackNode> nodes = getGraphNodes(graph);
@@ -186,10 +188,6 @@ public class GraphTranslator {
             return null;
         }
     }
-
-
-
-
 
 
     private List<SignalBoundary> getSignalsFromEdge(TrackGraph graph, TrackNode node1, TrackNode node2) {
@@ -247,7 +245,7 @@ public class GraphTranslator {
                 length += trackEdge.getLength();
             }
         }
-        BlockEdge Bedge = new BlockEdge(start, end, stations, (int) length);
+        BlockEdge Bedge = new BlockEdge(start, end, stations, (int) length, BlockEdge.EdgeType.NORMAL);
         blockGraph.edges.add(Bedge);
         start.connections.add(Bedge);
         end.connections.add(Bedge);
@@ -262,6 +260,7 @@ public class GraphTranslator {
         int p2loc = java.util.stream.IntStream.range(0, edges.size()).filter(i -> edges.get(i).getEdgeData().getPoints().contains(p2)).findFirst().orElseThrow();
         List<BlockStation> blockStations = new ArrayList<>();
         double currentDistance = 0;
+        BlockEdge.EdgeType type;
         if (p1loc <= p2loc) {
             for (int i = 0; i <= p2loc; i++) {
                 TrackEdge edge = edges.get(i);
@@ -287,6 +286,7 @@ public class GraphTranslator {
                     currentDistance += edge.getLength();
                 }
             }
+            type = SignaltoEdgeType(p1.types.get(!p1.isPrimary(edges.get(p1loc).node1)));
         } else {
             // This case might happen if edges list is not in the direction of traversal between p1 and p2
             // But based on traverseToNextBoundary, edges should be in order.
@@ -314,8 +314,9 @@ public class GraphTranslator {
                     currentDistance += edge.getLength();
                 }
             }
+            type = SignaltoEdgeType(p1.types.get(!p1.isPrimary(edges.get(p2loc).node1)));
         }
-        BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) distance(p1,p2,edges));
+        BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) distance(p1,p2,edges), type);
         blockGraph.edges.add(Bedge);
         start.connections.add(Bedge);
         end.connections.add(Bedge);
@@ -324,6 +325,7 @@ public class GraphTranslator {
             station.setLocation(currentDistance-station.location);
         }
     }
+
     private void createBlockEdge(TrackGraph graph,BlockGraph blockGraph,BlockNode start, BlockNode end,List<TrackEdge> edges,SignalBoundary p,boolean first) {
         int ploc = java.util.stream.IntStream.range(0, edges.size()).filter(i -> edges.get(i).getEdgeData().getPoints().contains(p)).findFirst().orElseThrow();
         List<BlockStation> blockStations = new ArrayList<>();
@@ -351,7 +353,7 @@ public class GraphTranslator {
                 }
             }
             currentDistance += p.getLocationOn(edges.get(ploc));
-            BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) currentDistance);
+            BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) currentDistance, BlockEdge.EdgeType.NORMAL);
             blockGraph.edges.add(Bedge);
             start.connections.add(Bedge);
             end.connections.add(Bedge);
@@ -379,8 +381,9 @@ public class GraphTranslator {
                     currentDistance += edge.getLength();
                 }
             }
+            BlockEdge.EdgeType type = SignaltoEdgeType(p.types.get(!p.isPrimary(edges.get(ploc).node1)));
             currentDistance += (edges.get(ploc).getLength() - p.getLocationOn(edges.get(ploc)));
-            BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) currentDistance);
+            BlockEdge Bedge = new BlockEdge(start, end, blockStations, (int) currentDistance, type);
             blockGraph.edges.add(Bedge);
             start.connections.add(Bedge);
             end.connections.add(Bedge);
@@ -426,6 +429,49 @@ public class GraphTranslator {
         return Triple.of(ogNode, nextNode, Pair.of(collectedSignals, path));
     }
 
+    private void TraverseAndFillChainSignals(BlockGraph blockGraph) {
+        List<BlockEdge> originalEdges = blockGraph.edges;
+        Set<BlockEdge> newEdges = new LinkedHashSet<>(); // Prevents duplicates and preserves order
+        Set<BlockNode> visitedNodes = new HashSet<>();
+
+        for (BlockEdge edge : originalEdges) {
+            if (edge.type == BlockEdge.EdgeType.NORMAL) {
+                newEdges.add(edge);
+            } else {
+                newEdges.add(edge);
+                Queue<BlockNode> nodesToCheck = new ArrayDeque<>();
+                nodesToCheck.add(edge.end);
+
+                while (!nodesToCheck.isEmpty()) {
+                    BlockNode currentNode = nodesToCheck.poll();
+                    if (!visitedNodes.add(currentNode)) continue;
+
+                    if (currentNode.type != BlockNode.NodeType.SIGNAL) {
+                        for (BlockEdge nextEdge : currentNode.connections) {
+                            nextEdge.type = BlockEdge.EdgeType.CHAIN;
+                            if (newEdges.add(nextEdge)) {
+                                nodesToCheck.add(nextEdge.end);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        blockGraph.edges = new ArrayList<>(newEdges);
+    }
+
+    private void LinkOppositeEdges(BlockGraph blockGraph) {
+        for (int i = 0; i < blockGraph.edges.size(); i++) {
+            BlockEdge edgeA = blockGraph.edges.get(i);
+            for (int j = i + 1; j < blockGraph.edges.size(); j++) {
+                BlockEdge edgeB = blockGraph.edges.get(j);
+                if (edgeA.start == edgeB.end && edgeA.end == edgeB.start) {
+                    edgeA.opposite = edgeB;
+                    edgeB.opposite = edgeA;
+                }
+            }
+        }
+    }
 
 
 }

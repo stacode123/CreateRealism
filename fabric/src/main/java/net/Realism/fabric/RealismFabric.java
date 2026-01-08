@@ -20,9 +20,9 @@ public class RealismFabric implements ModInitializer {
                 () -> () -> "{} is accessing Porting Lib on a Fabric client!",
                 () -> () -> "{} is accessing Porting Lib on a Fabric server!"
         ), RealismMod.NAME);
+        commonSetup();
         RealismMod.REGISTRATE.register();
         FabricConfigRegistration.register();
-        commonSetup();
         serverInit();
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> RealismCommands.register(dispatcher));
         CommonEventsImpl.register();

@@ -27,6 +27,9 @@ public class RealismScreens extends Screen implements IRealismScreens {
                 null,
                 builder
         );
+        if (this.minecraft != null) {
+            wrapper.init(this.minecraft, this.width, this.height);
+        }
     }
 
     @Override

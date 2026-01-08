@@ -72,13 +72,13 @@ public class TimeOfDayRealistic extends TimeOfDayCondition {
         MutableObject<ScrollInput> hourInput = new MutableObject<>();
         MutableObject<Label> timeLabel = new MutableObject<>();
 
-        builder.addScrollInput(0, 16, (i, l) -> {
+        builder.addScrollInput(0, 20, (i, l) -> {
             i.withRange(0, 24);
             timeLabel.setValue(l);
             hourInput.setValue(i);
         }, "Hour");
 
-        builder.addScrollInput(18, 16, (i, l) -> {
+        builder.addScrollInput(18, 20, (i, l) -> {
             i.withRange(0, 60);
             minuteInput.setValue(i);
             l.visible = false;
