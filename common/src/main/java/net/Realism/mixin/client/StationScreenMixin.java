@@ -60,7 +60,7 @@ public abstract class StationScreenMixin extends AbstractStationScreen {
 
     @Unique
     private void alignAndToggleSettings() {
-            realism$settingsButton.visible = this.disassembleTrainButton.visible && this.disassembleTrainButton.active;
+            realism$settingsButton.visible = this.disassembleTrainButton.visible;
         }
     @Unique
     private void onSettingsPressed() {
