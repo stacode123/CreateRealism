@@ -9,7 +9,6 @@ import net.Realism.mixin.mixinaccesors.PlacementInfoAccessor;
 import net.createmod.catnip.data.Pair;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.level.GameType;
 
 public class TrackOverlay {
     public static Pair<MutableComponent,MutableComponent> getText(PlacementInfoAccessor placement){
@@ -26,7 +25,6 @@ public class TrackOverlay {
         float mxspeed = Math.max(mxspeedP, mxspeedU);
         double mphc = (RealismConfig.CLIENT.OverlayMPH.get() ? 0.621371192 : 1);
         double radius = placement.getCurve().getRadius();
-        double handleLength = placement.getCurve().getHandleLength();
         if (mxspeed == 0) {
             mxspeed = 1;
         }

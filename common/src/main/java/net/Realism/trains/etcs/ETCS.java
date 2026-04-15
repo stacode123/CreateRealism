@@ -845,7 +845,7 @@ public class ETCS {
                 .map(Optional::get)
                 .findFirst();
 
-        if (!controllingPlayerUuid.isPresent()) return;
+        if (controllingPlayerUuid.isEmpty()) return;
 
         SteerDirectionPacket.KeyPressType currentKeyPress = SteerDirectionPacket.getPlayerKeyPress(controllingPlayerUuid.get());
         if (zoom == 0){
