@@ -52,14 +52,14 @@ public class RealismConfig {
             builder.push("general");
             builder.push("Overlay");
             OverlayEnable = builder.comment("Enable Track Placing Overlay").define("Enable Overlay", true);
-            OverlayMPH = builder.comment("Use MPH For The Overlay").define("Usem mph", false);
+            OverlayMPH = builder.comment("Use MPH For The Overlay").define("Use mph", false);
             builder.pop();
             builder.push("ETCS");
             ETCSEnable = builder.comment("Enable ETCS for trains")
                     .define("ETCS Enable", true);
             ETCSSize = builder.comment("Size of the ETCS display")
                     .defineInRange("ETCS Size", 0.25, 0.1, 2);
-            ETCSMPH = builder.comment("Use Mph in ETCS").define("ETCS MPH", true);
+            ETCSMPH = builder.comment("Use Mph in ETCS").define("ETCS MPH", false);
             ETCSSounds = builder.comment("Enable ETCS sounds")
                     .define("ETCS Sounds", true);
             builder.pop();
