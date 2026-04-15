@@ -201,7 +201,7 @@ public class ETCS {
 
         // Render the speedometer needle
         posestack.pushPose();
-        posestack.translate(xPos + 167, yPos + 130, 0);
+        posestack.translate(xPos + 145, yPos + 125, 0);
 
         float rotationRadians = needleRotationDegrees * (float)(Math.PI / 180);
         posestack.mulPose(Axis.ZP.rotation(rotationRadians));
@@ -214,6 +214,27 @@ public class ETCS {
                 0, 0,         // texture position (top left of texture)
                 49, 112,   // width and height to render
                 49, 112);
+        posestack.popPose();
+        //Render the speedometer label
+        posestack.pushPose();
+        posestack.translate(xPos + 11, yPos + 216, 0);
+        if(RealismConfig.CLIENT.ETCSMPH.get()) {
+            RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/mph.png"));
+            graphics.blit(new ResourceLocation("realism:textures/mph.png"),
+                    0, 0,   // screen position
+                    0, 0,         // texture position (top left of texture)
+                    50, 29,   // width and height to render
+                    50, 29);
+
+        }
+        else {
+            RenderSystem.setShaderTexture(0,new ResourceLocation("realism:textures/kph.png"));
+            graphics.blit(new ResourceLocation("realism:textures/kph.png"),
+                    0, 0,   // screen position
+                    0, 0,         // texture position (top left of texture)
+                    50, 29,   // width and height to render
+                    50, 29);
+        }
         posestack.popPose();
         // Play info sound when a new route is detected
         if (pendingBeepSound) {
@@ -230,7 +251,7 @@ public class ETCS {
         // Render ETCS limits display
         renderETCSlimits(graphics, posestack, xPos + 10, yPos + 10);
         renderOverviewItems(graphics,xPos, yPos, zoom);
-        renderBrakingCurve(graphics, posestack, xPos+10, yPos+10);
+        renderBrakingCurve(graphics, posestack, xPos-12, yPos+5);
         updateWarningLoop();
         posestack.popPose();
     }

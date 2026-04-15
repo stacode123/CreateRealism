@@ -35,7 +35,8 @@
   "realism.gui.accel.value.label": "Acceleration:",
   "realism.gui.accel.default": "Default Acceleration: %s m/s^2",
   "realism.button.confirm": "Confirm",
-  "realism.network.version_mismatch": "Create: Realism network versions do not match! Server expected %s, client has %s"
+  "realism.network.version_mismatch": "Create: Realism network versions do not match! Server expected %s, client has %s",
+  "realism.overlay.speed_and_percent_mph": "%s mph/s %s%%"
 
 
 }

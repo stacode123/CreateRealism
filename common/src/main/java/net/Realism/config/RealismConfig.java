@@ -39,6 +39,10 @@ public class RealismConfig {
         public final ForgeConfigSpec.BooleanValue ETCSEnable;
         public final ForgeConfigSpec.DoubleValue ETCSSize;
         public final ForgeConfigSpec.BooleanValue ETCSSounds;
+        public final ForgeConfigSpec.BooleanValue ETCSMPH;
+
+        public final ForgeConfigSpec.BooleanValue OverlayEnable;
+        public final ForgeConfigSpec.BooleanValue OverlayMPH;
 
         // Banking Configuration
         public final ForgeConfigSpec.BooleanValue enableBanking;
@@ -46,11 +50,16 @@ public class RealismConfig {
 
         Client(ForgeConfigSpec.Builder builder) {
             builder.push("general");
+            builder.push("Overlay");
+            OverlayEnable = builder.comment("Enable Track Placing Overlay").define("Enable Overlay", true);
+            OverlayMPH = builder.comment("Use MPH For The Overlay").define("Usem mph", false);
+            builder.pop();
             builder.push("ETCS");
             ETCSEnable = builder.comment("Enable ETCS for trains")
                     .define("ETCS Enable", true);
             ETCSSize = builder.comment("Size of the ETCS display")
                     .defineInRange("ETCS Size", 0.25, 0.1, 2);
+            ETCSMPH = builder.comment("Use Mph in ETCS").define("ETCS MPH", true);
             ETCSSounds = builder.comment("Enable ETCS sounds")
                     .define("ETCS Sounds", true);
             builder.pop();

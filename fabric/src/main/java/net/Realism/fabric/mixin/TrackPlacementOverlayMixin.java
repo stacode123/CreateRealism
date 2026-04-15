@@ -8,6 +8,8 @@ import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.Realism.Interfaces.ITrackPlacementInterface;
 import net.Realism.Interfaces.ITrackPlacementMixin;
 import net.Realism.mixin.mixinaccesors.PlacementInfoAccessor;
+import net.Realism.trains.TrackOverlay;
+import net.createmod.catnip.data.Pair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
@@ -27,57 +29,20 @@ public class TrackPlacementOverlayMixin {
         Minecraft mc = Minecraft.getInstance();
         Window window = mc.getWindow();
         PlacementInfoAccessor placementInfo = (PlacementInfoAccessor) TrackPlacement.cached;
-        if (placementInfo == null) {
+        Pair<MutableComponent,MutableComponent> text = TrackOverlay.getText(placementInfo);
+        if (text==null){
             return;
         }
-        if (placementInfo.getCurve() == null) {
-            return;
-        }
-        boolean Straight = ((ITrackPlacementMixin) placementInfo.getCurve()).isStraight();
-        boolean Slope = ((ITrackPlacementMixin) placementInfo.getCurve()).isSlope();
-        float mxspeedP = (AllConfigs.server().trains.poweredTrainTopSpeed).getF() * 3.6f;
-        float mxspeedU = (AllConfigs.server().trains.trainTopSpeed).getF() * 3.6f;
-        float mxspeed = Math.max(mxspeedP, mxspeedU);
-        double radius = placementInfo.getCurve().getRadius();
-        double handleLength = placementInfo.getCurve().getHandleLength();
-        if (mxspeed == 0) {
-            mxspeed = 1;
-        }
-        if (radius > 90) {
-            radius = 90;
-        }
-        int speedVal = Math.round(mxspeed * (radius > 0 ? (float) (radius / 90f) : (float) (handleLength / 45f)));
-        int percentVal = Math.round((mxspeed * (radius > 0 ? (float) (handleLength / 45f) : (float) (handleLength / 45f)) / mxspeed) * 100);
-        MutableComponent radiusText = Component.translatable("realism.overlay.speed_and_percent", speedVal, percentVal);
-        if (radius == 0) {
-            if (handleLength > 45) {
-                handleLength = 45;
-            }
-            int speedVal2 = Math.round(mxspeed * (float) (handleLength / 45f));
-            int percentVal2 = Math.round((mxspeed * (float) (handleLength / 45f) / mxspeed) * 100);
-            radiusText = Component.translatable("realism.overlay.speed_and_percent", speedVal2, percentVal2);
-        }
-        if (Straight) {
-            return;
-        }
-        if (Slope) {
-            radiusText = Component.translatable("realism.overlay.speed_and_percent", Math.round(mxspeed), 100);
-        }
-        int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2;
-        int radiusY = window.getGuiScaledHeight() - 40;
+        int radiusX = (window.getGuiScaledWidth() - gui.getFont().width(text.getFirst())) / 2;
+        int radiusY = window.getGuiScaledHeight() - 40; // Adjusted position
         if(mc.gameMode.getPlayerMode() == GameType.SURVIVAL) {
-            radiusX = (window.getGuiScaledWidth() - gui.getFont().width(radiusText)) / 2+50;
+            radiusX = (window.getGuiScaledWidth() - gui.getFont().width(text.getFirst())) / 2+50;
             radiusY = window.getGuiScaledHeight() - 50;
         }
-
          // Adjusted position
-        graphics.drawString(gui.getFont(), radiusText, radiusX, radiusY, 0xFFFFFF, false);
-
-        ITrackPlacementInterface mixin = (ITrackPlacementInterface) TrackPlacement.cached;
-        double grade = mixin.getGrade();
-        MutableComponent gradeText = Component.translatable("realism.overlay.grade_percent", Math.round(grade * 100));
-        int gradeX = (window.getGuiScaledWidth() - gui.getFont().width(gradeText)) / 2;
+        graphics.drawString(gui.getFont(), text.getFirst(), radiusX, radiusY, 0xFFFFFF, false);
+        int gradeX = (window.getGuiScaledWidth() - gui.getFont().width(text.getSecond())) / 2;
         int gradeY = window.getGuiScaledHeight() - 50; // Adjusted position
-        graphics.drawString(gui.getFont(), gradeText, gradeX, gradeY, 0xFFFFFF, false);
+        graphics.drawString(gui.getFont(), text.getSecond(), gradeX, gradeY, 0xFFFFFF, false);
     }
 }

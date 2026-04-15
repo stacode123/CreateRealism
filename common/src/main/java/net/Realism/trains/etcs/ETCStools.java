@@ -6,6 +6,8 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.Realism.RealismMod;
+import net.Realism.config.RealismConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
@@ -17,13 +19,15 @@ public class ETCStools {
      */
     public static float calculateNeedleRotation(double trainSpeed) {
         float rotationDegrees;
-
-        float speedKmh = (float) Math.abs(trainSpeed * 20 * 3.6f);
-
-        if (speedKmh <= 160f) {
-            rotationDegrees = -151.5f + (1.134f) * speedKmh;
+        boolean useMph = RealismConfig.CLIENT.ETCSMPH.get();
+        float speed = (float) trainSpeed * 20 * 3.6f;
+        if (useMph){
+            speed =  speed * 0.621371192f;
+        }
+        if (speed <= 160f) {
+            rotationDegrees = -151.5f + (1.134f) * speed;
         } else {
-            rotationDegrees = 30f + ((0.671f) * (speedKmh - 160f));
+            rotationDegrees = 30f + ((0.671f) * (speed - 160f));
         }
 
         return rotationDegrees;
@@ -45,6 +49,9 @@ public class ETCStools {
 
         if(maxSpeed > 300) {
             maxSpeed = 300;
+        }
+        if(RealismConfig.CLIENT.ETCSMPH.get()) {
+            maxSpeed =  (maxSpeed * 0.621371192);
         }
 
         if (maxSpeed <= 160) {
