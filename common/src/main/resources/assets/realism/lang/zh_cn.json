@@ -1,0 +1,46 @@
+{
+  "realism.overlay.speed_and_percent": "%s km/h %s%%",
+  "realism.overlay.grade_percent": "%s%%",
+
+  "realism.screen.title": "Create Realism",
+
+  "realism.gui.train_settings.title": "Create: Realism | 列车配置",
+
+  "realism.gui.tilt.none": "禁用倾摆",
+  "realism.gui.tilt.passive": "被动倾摆",
+  "realism.gui.tilt.active": "主动倾摆",
+  "realism.gui.tilt.custom": "自定义",
+  "realism.gui.tilt.tooltip.header": "列车倾摆设置",
+  "realism.gui.tilt.tooltip.none": "禁用倾摆: 仅离心倾摆 (最大 2°)",
+  "realism.gui.tilt.tooltip.passive": "被动倾摆: 被动倾摆以抵消侧向力 (最大 4°)",
+  "realism.gui.tilt.tooltip.active": "被动倾摆: 主动倾摆以抵消侧向力 (最大 >8°)",
+  "realism.gui.tilt.tooltip.custom": "自定义: 自定义的倾摆配置.",
+  "realism.gui.tilt.label": "列车倾摆模式:",
+  "realism.gui.tilt.min_speed.tooltip": "列车开始倾摆时的速度（以km/h为单位）",
+  "realism.gui.tilt.min_speed.label": "开摆速度:",
+  "realism.gui.tilt.max_tilt.tooltip": "最大倾摆角（以°为单位）",
+  "realism.gui.tilt.max_tilt.label": "最大倾摆角:",
+  "realism.gui.tilt.intensity.tooltip": "决定列车倾摆程度",
+  "realism.gui.tilt.intensity.label": "倾摆程度:",
+  "realism.gui.tilt.direction.label": "倾摆方向:",
+  "realism.gui.tilt.direction.inside": "内侧",
+  "realism.gui.tilt.direction.outside": "外侧",
+
+  "realism.gui.accel.setting.none": "无",
+  "realism.gui.accel.setting.standard": "标准",
+  "realism.gui.accel.setting.custom": "自定义",
+  "realism.gui.accel.tooltip.header": "列车加速度设置",
+  "realism.gui.accel.tooltip.none": "无:列车速度不受影响",
+  "realism.gui.accel.tooltip.standard1": "标准:列车速度受影响，",
+  "realism.gui.accel.tooltip.standard2": "取决于车重和动力。",
+  "realism.gui.accel.tooltip.custom": "自定义:自行配置列车加速度",
+  "realism.gui.accel.label": "列车加速度配置:",
+  "realism.gui.accel.value.label": "加速度:",
+  "realism.gui.accel.default": "默认加速度为: %s m/s^2",
+
+  "realism.button.confirm": "确定",
+
+  "realism.network.version_mismatch": "Create: Realism 版本不匹配！ 服务端为 %s, 当前客户端为 %s",
+
+  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic"
+}
