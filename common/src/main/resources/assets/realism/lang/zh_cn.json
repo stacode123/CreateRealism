@@ -1,5 +1,6 @@
 {
   "realism.overlay.speed_and_percent": "%s km/h %s%%",
+"realism.overlay.speed_and_percent_mph": "%s mph/s %s%%",
   "realism.overlay.grade_percent": "%s%%",
 
   "realism.screen.title": "Create Realism",
@@ -30,8 +31,8 @@
   "realism.gui.accel.setting.standard": "标准",
   "realism.gui.accel.setting.custom": "自定义",
   "realism.gui.accel.tooltip.header": "列车加速度设置",
-  "realism.gui.accel.tooltip.none": "无:列车速度不受影响",
-  "realism.gui.accel.tooltip.standard1": "标准:列车速度受影响，",
+  "realism.gui.accel.tooltip.none": "无:列车加速度不受影响",
+  "realism.gui.accel.tooltip.standard1": "标准:列车加速度受影响，",
   "realism.gui.accel.tooltip.standard2": "取决于车重和动力。",
   "realism.gui.accel.tooltip.custom": "自定义:自行配置列车加速度",
   "realism.gui.accel.label": "列车加速度配置:",
