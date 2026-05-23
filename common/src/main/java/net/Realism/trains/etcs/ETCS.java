@@ -203,7 +203,7 @@ public class ETCS {
         posestack.pushPose();
         posestack.translate(xPos + 145, yPos + 125, 0);
 
-        float rotationRadians = needleRotationDegrees * (float)(Math.PI / 180);
+        float rotationRadians = ETCStools.calculateNeedleRotation(train.speed) * (float)(Math.PI / 180);
         posestack.mulPose(Axis.ZP.rotation(rotationRadians));
         posestack.translate(-24, -89, 0);
 
