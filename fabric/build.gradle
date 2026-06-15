@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
 architectury {
@@ -51,7 +51,7 @@ dependencies {
     implementation(shadowCommon("javazoom:jlayer:${jlayer_version}"))
 
     // Create - dependencies are added transitively
-    modImplementation("com.simibubi.create:create-fabric:${create_fabric_version}-mc${minecraft_version}")
+    modImplementation("com.simibubi.create:create-${minecraft_version}:${create_forge_version}:slim") { transitive = false }
 
     // Development QOL
     modLocalRuntime("maven.modrinth:lazydfu:${lazydfu_version}")
@@ -64,8 +64,8 @@ dependencies {
         case "disabled": break
         default: println("Unknown recipe viewer specified: ${fabric_recipe_viewer}. Must be JEI, REI, EMI, or disabled.")
     }
-    modCompileOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
-    modRuntimeOnly("purplecreate.tramways:tramways-fabric:$tramways_version-mc1.20.1-fabric")
+      modCompileOnly(name: "tramways-fabric-$tramways_version-mc1.21.1-fabric", classifier: "named")
+    modRuntimeOnly(name: "tramways-fabric-$tramways_version-mc1.21.1-fabric", classifier: "named")
     //modImplementation("curse.maven:journeymap-32274:5789354")
 
     modImplementation "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
@@ -81,7 +81,7 @@ processResources {
             "fabric_loader_version", fabric_loader_version,
             "fabric_api_version", fabric_api_version,
             "minecraft_version", minecraft_version,
-            "create_version", create_fabric_version,
+            "create_version", create_forge_version,
             "tramways_version", tramways_version,
             "architectury_version", architectury_api_version,
             "dragonlib_version", dragonlib_version
@@ -139,7 +139,7 @@ publishMods {
         minecraftVersions.add(minecraft_version)
         modLoaders.add("fabric")
 
-        requires("create-fabric")
+        requires("create")
         requires("architectury-api")
         requires("dragonlib")
         optional("tramways")
@@ -152,7 +152,7 @@ publishMods {
         minecraftVersions.add(minecraft_version)
         modLoaders.add("fabric")
 
-        requires("create-fabric")
+        requires("create")
         requires("architectury-api")
         requires("dragonlib")
         optional("tramways")

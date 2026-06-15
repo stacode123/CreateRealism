@@ -9,7 +9,7 @@ pluginManagement {
 }
 
 include("common")
-include("fabric")
+//include("fabric")  // Create 1.21.1 Fabric not available
 include("forge")
 
 rootProject.name = "realism"
