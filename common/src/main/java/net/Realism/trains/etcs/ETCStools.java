@@ -19,7 +19,7 @@ public class ETCStools {
     public static float calculateNeedleRotation(double trainSpeed) {
         float rotationDegrees;
         boolean useMph = RealismConfig.CLIENT.ETCSMPH.get();
-        float speed = (float) trainSpeed * 20 * 3.6f;
+        float speed = Math.abs((float) trainSpeed * 20 * 3.6f);
         if (useMph){
             speed =  speed * 0.621371192f;
         }
