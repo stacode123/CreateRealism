@@ -11,6 +11,7 @@ import com.simibubi.create.content.trains.signal.TrackEdgePoint;
 import net.Realism.compat.TramwaysCompat;
 import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.data.Pair;
+//import com.simibubi.create.foundation.utility.Couple
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;

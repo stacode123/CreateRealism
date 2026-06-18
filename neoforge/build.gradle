@@ -24,26 +24,37 @@ dependencies {
     common(project(path: ":common", configuration: "namedElements")) { transitive = false }
     shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }
 
+    forgeRuntimeLibrary(implementation(shadowCommon("javazoom:jlayer:${jlayer_version}")))
+
+
     compileOnly("io.github.llamalad7:mixinextras-common:${mixin_extras_version}")
     annotationProcessor(implementation(include("io.github.llamalad7:mixinextras-neoforge:${mixin_extras_version}")))
 
-    forgeRuntimeLibrary(implementation(shadowCommon("javazoom:jlayer:${jlayer_version}")))
+    // Provides ForgeConfigSpec for common module (loaded at runtime via forgeconfigapiport-neoforge)
+    modCompileOnly("fuzs.forgeconfigapiport:forgeconfigapiport-neoforge:${forgeconfigapiport_version}")
 
     // Create and its dependencies
     modImplementation("com.simibubi.create:create-${minecraft_version}:${create_forge_version}:slim") { transitive = false }
     modImplementation("com.tterrag.registrate:Registrate:${registrate_forge_version}")
-    modImplementation("net.createmod.ponder:ponder-neoforge:${ponder_forge_version}+mc${minecraft_version}")
-    modCompileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_forge_version}")
-    modRuntimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_forge_version}")
+    modImplementation("net.createmod.ponder:Ponder-NeoForge-${minecraft_version}:${ponder_neoforge_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
+    runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
 
     // Development QOL
     modLocalRuntime("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}") { transitive = false }
 
-     modImplementation("de.mrjulsen.mcdragonlib:dragonlib-neoforge:$minecraft_version-$dragonlib_version")
-
     // modCompileOnly("purplecreate.tramways:tramways-neoforge:$tramways_version-mc1.21.1-neoforge")
     // modRuntimeOnly("purplecreate.tramways:tramways-neoforge:$tramways_version-mc1.21.1-neoforge")
-    modImplementation("curse.maven:journeymap-32274:5457831")}
+    modImplementation("curse.maven:journeymap-32274:5457831")
+
+    modImplementation("de.mrjulsen.mcdragonlib:dragonlib-neoforge:$minecraft_version-$dragonlib_version")
+    annotationProcessor(implementation("io.github.llamalad7:mixinextras-neoforge:${mixin_extras_version}"))
+
+
+
+}
+
+
 
 processResources {
     Map<String, String> properties = Map.of(
@@ -96,6 +107,8 @@ components.java {
         skip()
     }
 }
+
+
 
 publishMods {
     type = STABLE

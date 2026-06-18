@@ -1,8 +1,9 @@
-package net.Realism.forge.mixin.client;
+package net.Realism.neoforge.mixin.client;
 
 import com.simibubi.create.content.contraptions.AbstractContraptionEntity;
 import com.simibubi.create.content.contraptions.Contraption;
 import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
+import com.simibubi.create.content.contraptions.actors.seat.SeatEntity;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
@@ -16,11 +17,10 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
-@Mixin(value = AbstractContraptionEntity.class,remap = false)
+@Mixin(value = AbstractContraptionEntity.class, remap = false)
 public class AbstractContraptionEntityMixin {
 
     @Shadow
@@ -35,7 +35,7 @@ public class AbstractContraptionEntityMixin {
 
     @Inject(method = "stopControlling", at = @At("TAIL"))
     //@OnlyIn(Dist.CLIENT)
-    private void AfterStopControlling(CallbackInfo ci) {
+    private void AfterStopControlling(org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
         //noinspection ConstantValue
         if(this.getClass().equals(CarriageContraptionEntity.class)){
             CarriageContraptionEntity carriageContraptionEntity = (CarriageContraptionEntity)(Object)this;
@@ -74,15 +74,21 @@ public class AbstractContraptionEntityMixin {
         BlockPos seat = contraption.getSeatOf(id);
         if (seat == null)
             return null;
+
         if(contraption.entity instanceof IOrientedContraptionEntity orientedEntity){
+            double seatOffset = -passenger.getVehicleAttachmentPoint(contraption.entity).y + ySize + .125
+                    - SeatEntity.getCustomEntitySeatOffset(passenger);
             return toGlobalVector(Vec3.atLowerCornerOf(seat)
                     .xRot((float) Math.toRadians(-orientedEntity.realism$getViewRoll(partialTicks)))
-                    .add(.5, passenger.getMyRidingOffset() + ySize - .15f, .5), partialTicks)
+                    .add(.5, seatOffset, .5), partialTicks)
                     .add(VecHelper.getCenterOf(BlockPos.ZERO))
                     .subtract(0.5, ySize, 0.5);
         }
+
+        double seatOffset = -passenger.getVehicleAttachmentPoint(contraption.entity).y + ySize + .125
+                - SeatEntity.getCustomEntitySeatOffset(passenger);
         Vec3 transformedVector = toGlobalVector(Vec3.atLowerCornerOf(seat)
-                .add(.5, passenger.getMyRidingOffset() + ySize - .15f, .5), partialTicks)
+                .add(.5, seatOffset, .5), partialTicks)
                 .add(VecHelper.getCenterOf(BlockPos.ZERO))
                 .subtract(0.5, ySize, 0.5);
         return transformedVector;

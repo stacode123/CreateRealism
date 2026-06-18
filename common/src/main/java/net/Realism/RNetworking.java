@@ -46,14 +46,18 @@ public class RNetworking {
                 if (RNetworking.VERSION.equals(serverVersion))
                     return;
 
-                mc.getConnection().onDisconnect(
-                        Component.translatable(
-                                "realism.network.version_mismatch",
-                                serverVersion,
-                                RNetworking.VERSION
+                mc.getConnection().getConnection().disconnect(
+                        new net.minecraft.network.DisconnectionDetails(
+                                Component.translatable(
+                                        "realism.network.version_mismatch",
+                                        serverVersion,
+                                        RNetworking.VERSION
+                                )
                         )
                 );
             }
+
+
         }
 
     private static <T extends S2CPacket> void registerS2C(

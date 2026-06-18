@@ -13,6 +13,7 @@ import net.Realism.config.RealismConfig;
 import net.Realism.network.TrainSettingsUpdatePacket;
 import net.Realism.trains.TrainSettings;
 import net.Realism.trains.etcs.ETCS;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -69,7 +70,7 @@ public abstract class TrainMixin implements ITrainInterface {
         }
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
-    private void write(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
+    private void write(DimensionPalette dimensions, HolderLookup.Provider registries,CallbackInfoReturnable<CompoundTag> cir) {
         CompoundTag tag =  cir.getReturnValue();
         if (this.realism$etcs != null) {
             tag.put("ETCS", this.realism$etcs.saveToNBT());
@@ -83,7 +84,7 @@ public abstract class TrainMixin implements ITrainInterface {
     }
 
     @Inject(method = "read", at = @At("RETURN"), cancellable = true)
-    private static void onTrainRead(CompoundTag tag, Map<UUID, TrackGraph> trackNetworks,
+    private static void onTrainRead(CompoundTag tag, HolderLookup.Provider registries, Map<UUID, TrackGraph> trackNetworks,
                                     DimensionPalette dimensions, CallbackInfoReturnable<Train> cir) {
         Train original = cir.getReturnValue();
         if (tag.contains("ETCS")) {

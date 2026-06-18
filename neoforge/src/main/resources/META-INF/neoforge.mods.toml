@@ -1,0 +1,60 @@
+modLoader="javafml"
+loaderVersion = "[4,)"
+license="MIT"
+
+[[mods]]
+modId="realism"
+version="${version}"
+displayName="Create Realism"
+authors="Stacode"
+description='''
+A mod changing the Trains in create to be more realistic
+'''
+
+[[dependencies.realism]]
+modId="neoforge"
+type = "required"
+versionRange = "[${neoforge_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="minecraft"
+type = "required"
+versionRange = "[${minecraft_version}]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="create"
+type = "required"
+versionRange="${create_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="tramways"
+type = "optional"
+versionRange="[0.4.0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="architectury"
+type = "required"
+versionRange="[${architectury_api_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.realism]]
+modId="dragonlib"
+type = "required"
+versionRange="[${dragonlib_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[mixins]]
+config = "realismCommon.mixins.json"
+
+[[mixins]]
+config = "realismForge.mixins.json"

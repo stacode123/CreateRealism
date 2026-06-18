@@ -3,6 +3,7 @@ package net.Realism.mixin;
 import com.simibubi.create.content.contraptions.OrientedContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
@@ -75,7 +76,7 @@ public abstract class OrientedContraptionEntityMixin implements IOrientedContrap
      * Save roll to NBT
      */
     @Inject(method = "writeAdditional", at = @At("TAIL"))
-    protected void writeRollToNBT(CompoundTag compound, boolean spawnPacket, CallbackInfo ci) {
+    protected void writeRollToNBT(CompoundTag compound, HolderLookup.Provider registries, boolean spawnPacket, CallbackInfo ci) {
         compound.putFloat("Roll", realism$roll);
     }
 

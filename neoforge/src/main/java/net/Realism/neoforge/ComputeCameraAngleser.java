@@ -1,17 +1,17 @@
-package net.Realism.forge;
+package net.Realism.neoforge;
 
 
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.IOrientedContraptionEntity;
 import net.Realism.config.RealismConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ViewportEvent;
 
-@Mod.EventBusSubscriber(modid = "realism", bus = Mod.EventBusSubscriber.Bus.FORGE,value = Dist.CLIENT)
+@EventBusSubscriber(modid = "realism", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ComputeCameraAngleser {
 
     float roal = 0f;

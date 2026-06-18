@@ -1,10 +1,10 @@
-package net.Realism.forge;
+package net.Realism.neoforge;
 
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 public class RealismExpectPlatformImpl {
 	public static String platformName() {
-		return "Forge";
+		return "NeoForge";
 	}
 
 	public static boolean isForge() {

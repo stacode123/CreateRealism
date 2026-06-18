@@ -192,8 +192,8 @@ public class ETCS {
         }
         // Render the ETCS panel background
         String zoomTexture = String.format("realism:textures/etcszoom%d.png", zoom);
-        RenderSystem.setShaderTexture(0, new ResourceLocation(zoomTexture));
-        graphics.blit(new ResourceLocation(zoomTexture),
+        RenderSystem.setShaderTexture(0, ResourceLocation.tryBuild("realism", "textures/etcszoom" + zoom + ".png"));
+        graphics.blit(ResourceLocation.tryBuild("realism", "textures/etcszoom" + zoom + ".png"),
                 xPos, yPos,   // screen position
                 0, 0,         // texture position (top left of texture)
                 536, 401,   // width and height to render
@@ -208,8 +208,8 @@ public class ETCS {
         posestack.translate(-24, -89, 0);
 
         // Render the image
-        RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/etcshand.png"));
-        graphics.blit(new ResourceLocation("realism:textures/etcshand.png"),
+        RenderSystem.setShaderTexture(0, ResourceLocation.tryBuild("realism", "textures/etcshand.png"));
+        graphics.blit(ResourceLocation.tryBuild("realism", "textures/etcshand.png"),
                 0, 0,   // screen position
                 0, 0,         // texture position (top left of texture)
                 49, 112,   // width and height to render
@@ -219,8 +219,8 @@ public class ETCS {
         posestack.pushPose();
         posestack.translate(xPos + 11, yPos + 216, 0);
         if(RealismConfig.CLIENT.ETCSMPH.get()) {
-            RenderSystem.setShaderTexture(0, new ResourceLocation("realism:textures/mph.png"));
-            graphics.blit(new ResourceLocation("realism:textures/mph.png"),
+            RenderSystem.setShaderTexture(0, ResourceLocation.tryBuild("realism", "textures/mph.png"));
+            graphics.blit(ResourceLocation.tryBuild("realism", "textures/mph.png"),
                     0, 0,   // screen position
                     0, 0,         // texture position (top left of texture)
                     50, 29,   // width and height to render
@@ -228,8 +228,8 @@ public class ETCS {
 
         }
         else {
-            RenderSystem.setShaderTexture(0,new ResourceLocation("realism:textures/kph.png"));
-            graphics.blit(new ResourceLocation("realism:textures/kph.png"),
+            RenderSystem.setShaderTexture(0,ResourceLocation.tryBuild("realism", "textures/kph.png"));
+            graphics.blit(ResourceLocation.tryBuild("realism", "textures/kph.png"),
                     0, 0,   // screen position
                     0, 0,         // texture position (top left of texture)
                     50, 29,   // width and height to render
@@ -261,10 +261,10 @@ public class ETCS {
         posestack.translate(Xpos + 361, Ypos + 227, 0);
         int CurrentY = 0;
 
-        ResourceLocation startTex = new ResourceLocation("realism:textures/etcsplusstart.png");
-        ResourceLocation midTex = new ResourceLocation("realism:textures/etcsplusmid.png");
-        ResourceLocation endTex = new ResourceLocation("realism:textures/etcsplusend.png");
-        ResourceLocation flagTex = new ResourceLocation("realism:textures/flag.png");
+        ResourceLocation startTex = ResourceLocation.tryBuild("realism", "textures/etcsplusstart.png");
+        ResourceLocation midTex = ResourceLocation.tryBuild("realism", "textures/etcsplusmid.png");
+        ResourceLocation endTex = ResourceLocation.tryBuild("realism", "textures/etcsplusend.png");
+        ResourceLocation flagTex = ResourceLocation.tryBuild("realism", "textures/flag.png");
 
         // Scale boundaries based on zoom to match calculateDistancePixelPosition
         double scaledMax = 4000.0 / zoom;
@@ -496,7 +496,7 @@ public class ETCS {
 
     public void renderOverviewItems(GuiGraphics graphics, int xPos, int yPos, int zoom) {
         Font font = Minecraft.getInstance().font;
-        ResourceLocation flag = new ResourceLocation("realism:textures/flag.png");
+        ResourceLocation flag = ResourceLocation.tryBuild("realism", "textures/flag.png");
         for (SpeedLimit s : cachedSpeedLimits){
             if (s.distance() > distanceToSignal){continue;}
             int pixelPos = calculateDistancePixelPosition(s.distance(), zoom);

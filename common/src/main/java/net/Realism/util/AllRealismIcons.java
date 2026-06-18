@@ -5,7 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
 public class AllRealismIcons implements ScreenElement {
-    public static final ResourceLocation icons = new ResourceLocation("realism:textures/gui/settings.png");
+    public static final ResourceLocation icons = ResourceLocation.parse("realism:textures/gui/settings.png");
     private static int x = 0, y = -1;
     private int iconX;
     private int iconY;

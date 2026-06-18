@@ -6,6 +6,7 @@ import com.simibubi.create.content.trains.graph.DiscoveredPath;
 import com.simibubi.create.content.trains.schedule.Schedule;
 import com.simibubi.create.content.trains.schedule.ScheduleRuntime;
 import net.Realism.Interfaces.IScheduleRuntimeMixin;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -164,7 +165,7 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
     }
 
     @Inject(method = "read", at=@At("TAIL"))
-    public void read(CompoundTag tag, CallbackInfo ci) {
+    public void read(HolderLookup.Provider registries, CompoundTag tag, CallbackInfo ci) {
         departureDate = tag.getLong("departureDate");
         expectedArrivalDate = tag.getLong("expectedArrivalDate");
         lastScheduledDepartureDate = tag.getInt("lastScheduledDepartureDate");

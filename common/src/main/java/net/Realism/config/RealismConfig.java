@@ -1,17 +1,17 @@
 package net.Realism.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class RealismConfig {
     // Common Config
     public static class Common {
-        public final  ForgeConfigSpec.BooleanValue GlobalETCSEnable;
-        public final  ForgeConfigSpec.BooleanValue GlobalBankingEnable;
-        public final ForgeConfigSpec.BooleanValue EnableCustomTrainAcceleration;
-        public final ForgeConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
-        public final ForgeConfigSpec.BooleanValue AllowBiggerValuesTrains;
+        public final  ModConfigSpec.BooleanValue GlobalETCSEnable;
+        public final  ModConfigSpec.BooleanValue GlobalBankingEnable;
+        public final ModConfigSpec.BooleanValue EnableCustomTrainAcceleration;
+        public final ModConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
+        public final ModConfigSpec.BooleanValue AllowBiggerValuesTrains;
 
-        Common(ForgeConfigSpec.Builder builder) {
+        Common(ModConfigSpec.Builder builder) {
             builder.push("general");
             builder.push("Custom train acceleration");
             EnableCustomTrainAcceleration = builder.comment("Enable custom train acceleration(Custom and Standard)")
@@ -35,20 +35,20 @@ public class RealismConfig {
 
     // Client Config
     public static class Client {
-        public final ForgeConfigSpec.BooleanValue debugMode;
-        public final ForgeConfigSpec.BooleanValue ETCSEnable;
-        public final ForgeConfigSpec.DoubleValue ETCSSize;
-        public final ForgeConfigSpec.BooleanValue ETCSSounds;
-        public final ForgeConfigSpec.BooleanValue ETCSMPH;
+        public final ModConfigSpec.BooleanValue debugMode;
+        public final ModConfigSpec.BooleanValue ETCSEnable;
+        public final ModConfigSpec.DoubleValue ETCSSize;
+        public final ModConfigSpec.BooleanValue ETCSSounds;
+        public final ModConfigSpec.BooleanValue ETCSMPH;
 
-        public final ForgeConfigSpec.BooleanValue OverlayEnable;
-        public final ForgeConfigSpec.BooleanValue OverlayMPH;
+        public final ModConfigSpec.BooleanValue OverlayEnable;
+        public final ModConfigSpec.BooleanValue OverlayMPH;
 
         // Banking Configuration
-        public final ForgeConfigSpec.BooleanValue enableBanking;
-        public final ForgeConfigSpec.BooleanValue enablePlayerTilt;
+        public final ModConfigSpec.BooleanValue enableBanking;
+        public final ModConfigSpec.BooleanValue enablePlayerTilt;
 
-        Client(ForgeConfigSpec.Builder builder) {
+        Client(ModConfigSpec.Builder builder) {
             builder.push("general");
             builder.push("Overlay");
             OverlayEnable = builder.comment("Enable Track Placing Overlay").define("Enable Overlay", true);
@@ -76,18 +76,18 @@ public class RealismConfig {
         }
     }
 
-    public static final ForgeConfigSpec COMMON_SPEC;
+    public static final ModConfigSpec COMMON_SPEC;
     public static final Common COMMON;
 
-    public static final ForgeConfigSpec CLIENT_SPEC;
+    public static final ModConfigSpec CLIENT_SPEC;
     public static final Client CLIENT;
 
     static {
-        ForgeConfigSpec.Builder commonBuilder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder commonBuilder = new ModConfigSpec.Builder();
         COMMON = new Common(commonBuilder);
         COMMON_SPEC = commonBuilder.build();
 
-        ForgeConfigSpec.Builder clientBuilder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder clientBuilder = new ModConfigSpec.Builder();
         CLIENT = new Client(clientBuilder);
         CLIENT_SPEC = clientBuilder.build();
     }

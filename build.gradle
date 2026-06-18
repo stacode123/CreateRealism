@@ -1,9 +1,10 @@
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
     id "dev.architectury.loom" version "1.11-SNAPSHOT" apply false
-    id "io.github.p03w.machete" version "1.+" // automatic jar compressing on build
+  //  id "io.github.p03w.machete" version "1.+" // automatic jar compressing on build
     id "me.modmuss50.mod-publish-plugin" version "0.7.4" apply false
     id 'java'
+    id "idea"
 }
 
 
@@ -15,33 +16,18 @@ subprojects {
     apply plugin: "dev.architectury.loom"
     apply plugin: "me.modmuss50.mod-publish-plugin"
     apply plugin: "maven-publish"
+    apply plugin: "architectury-plugin"
 
 
     loom {
         silentMojangMappingsLicense()
-    }
+        runs{
+            configureEach {
+                //property 'mixin.env.remapRefMap', 'true'
+                //property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            }
+        }
 
-    repositories {
-        mavenCentral()
-        maven { url = "https://maven.shedaniel.me/" } // Cloth Config, REI
-        maven { url = "https://maven.blamejared.com/" } // JEI
-        maven { url = "https://maven.parchmentmc.org" } // Parchment mappings
-        maven { url = "https://maven.quiltmc.org/repository/release" } // Quilt Mappings
-        maven { url = "https://raw.githubusercontent.com/MisterJulsen/modsrepo/main/maven/" } // DragonLib
-        maven { url = "https://cursemaven.com"
-            content{
-                includeGroup("curse.maven")
-            }
-        }
-        maven { // Flywheel
-            url = "https://maven.tterrag.com/"
-            content {
-                // need to be specific here due to version overlaps
-                includeGroup("com.jozufozu.flywheel")
-            }
-        }
-        maven { url = "https://maven.neoforged.net/releases/" }
-        maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
     }
 
     dependencies {
@@ -72,7 +58,6 @@ subprojects {
 
 allprojects {
     apply plugin: "java"
-    apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
     archivesBaseName = rootProject.mod_id
@@ -82,21 +67,40 @@ allprojects {
     version = "${mod_version}-mc${minecraft_version}-${project.name}" + (buildNumber != null ? "-${buildNumber}" : "")
 
     repositories {
-        maven { url = "https://maven.createmod.net/" }
-        maven { url = "https://maven.tterrag.com" }
-        maven { url = "https://mvn.devos.one/snapshots/" }
-        maven { url = "https://mvn.devos.one/releases/" }
-        maven { url = "https://api.modrinth.com/maven" }
+        mavenCentral()
+        maven { url = "https://maven.shedaniel.me/" } // Cloth Config, REI
+        maven { url = "https://maven.parchmentmc.org" } // Parchment mappings
+        maven { url = "https://maven.quiltmc.org/repository/release" } // Quilt Mappings
+        maven { url = "https://raw.githubusercontent.com/MisterJulsen/modsrepo/main/maven/" } // DragonLib
+        maven { url = "https://cursemaven.com"
+            content {
+                includeGroup("curse.maven")
+            }
+        }
+        maven { url = file("${System.getProperty('user.home')}/.m2/github/modsrepo/maven") } // Local
+        maven { url = "https://maven.mrjulsen.net" } // DragonLib
+        maven { url = "https://maven.blamejared.com/" } // JEI, Embeddium
+        maven { url = "https://dvs1.progwml6.com/files/maven/" } // JEI
+        maven { url = "https://modmaven.dev" } // JEI
+        maven { url = "https://maven.createmod.net/" } // Create, Ponder, Flywheel
+        maven { url = "https://maven.tterrag.com" } // Flywheel
+        maven { url = "https://mvn.devos.one/snapshots/" } // Registrate, Porting Lib, Forge Tags, Milk Lib
+        maven { url = "https://mvn.devos.one/releases/" } // Porting Lib
+        maven { url = "https://api.modrinth.com/maven" } // Modrinth
         maven { url = "https://jitpack.io/" }
-        maven { url = "https://maven.jamieswhiteshirt.com/libs-release" }
-        maven { url = "https://maven.terraformersmc.com/releases/" }
-        maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
-        maven { url = "https://purplecreate.github.io/maven/"}
+        maven { url = "https://maven.jamieswhiteshirt.com/libs-release" } // CreateRailwayDetails
+        maven { url = "https://maven.terraformersmc.com/releases/" } // Mod Menu
+        maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" } // ForgeConfigAPIPort
+        maven { url = "https://purplecreate.github.io/maven/" } // Purple Create
         maven { url = "https://maven.neoforged.net/releases/" }
         flatDir {
             dirs "${rootProject.projectDir}/libs/"
         }
     }
+
+    // Force Flywheel to 1.0.6 — Create's POM declares Flywheel range [1.0,2.0) or [1.0.6,2.0)
+    // but Loom resolves to 1.0.4, which is missing BlockMaterialFunction
+
 
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
@@ -108,10 +112,10 @@ allprojects {
             targetCompatibility = JavaVersion.VERSION_21
     }
 
-    machete {
+    //machete {
         // disable machete locally for faster builds
-        enabled = buildNumber != null
-    }
+      //  enabled = buildNumber != null
+   // }
 }
 
 tasks.create("publishRealism") {

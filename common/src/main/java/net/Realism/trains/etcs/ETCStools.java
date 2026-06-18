@@ -1,9 +1,11 @@
 package net.Realism.trains.etcs;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.Realism.config.RealismConfig;
@@ -77,10 +79,7 @@ public class ETCStools {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
         Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder buffer = tesselator.getBuilder();
-
-        // Draw arc as a triangle strip
-        buffer.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
 
         for (int i = 0; i <= segments; i++) {
             float ratio = (float)i / segments;
@@ -92,15 +91,18 @@ public class ETCStools {
             // Outer vertex
             float outerX = cos * radius;
             float outerY = sin * radius;
-            buffer.vertex(matrix, outerX, outerY, 0).color(r, g, b, a).endVertex();
+            buffer.addVertex(matrix, outerX, outerY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
 
             // Inner vertex
             float innerX = cos * (radius - arcWidth);
             float innerY = sin * (radius - arcWidth);
-            buffer.vertex(matrix, innerX, innerY, 0).color(r, g, b, a).endVertex();
+            buffer.addVertex(matrix, innerX, innerY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
         }
 
-        tesselator.end();
+        MeshData meshData = buffer.build();
+        if (meshData != null) {
+            BufferUploader.drawWithShader(meshData);
+        }
 
         // Draw the inward indicator at the end
         float endX = (float)Math.cos(endAngleRad) * (radius - (float) arcWidth / 2);
@@ -115,20 +117,22 @@ public class ETCStools {
         perpX = (perpX / perpLen) * 2; // 4 pixel width (2 on each side)
         perpY = (perpY / perpLen) * 2;
 
-        buffer.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
-        buffer.vertex(matrix, endX + perpX, endY + perpY, 0).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, endX - perpX, endY - perpY, 0).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, innerEndX + perpX, innerEndY + perpY, 0).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, innerEndX - perpX, innerEndY - perpY, 0).color(r, g, b, a).endVertex();
-        tesselator.end();
+        // Second draw call — need a new buffer from tesselator.begin()
+        BufferBuilder buffer2 = tesselator.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        buffer2.addVertex(matrix, endX + perpX, endY + perpY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
+        buffer2.addVertex(matrix, endX - perpX, endY - perpY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
+        buffer2.addVertex(matrix, innerEndX + perpX, innerEndY + perpY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
+        buffer2.addVertex(matrix, innerEndX - perpX, innerEndY - perpY, 0.0f).setColor((int)(r * 255), (int)(g * 255), (int)(b * 255), (int)(a * 255));
+
+        meshData = buffer2.build();
+        if (meshData != null) {
+            BufferUploader.drawWithShader(meshData);
+        }
 
         RenderSystem.disableBlend();
 
         poseStack.popPose();
     }
-
-
-
 
 
 
