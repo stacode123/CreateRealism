@@ -21,15 +21,20 @@ import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.TrainSettingsSavePacket;
 import net.Realism.trains.TrainSettings;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TrainSettingsGui extends DLWindow {
 
+    // Suppress picker change events when syncTiltPickers is updating them programmatically
+    private boolean suppressingPickerEvents = false;
+
     private Font getFont() {
-        return net.minecraft.client.Minecraft.getInstance().font;
+        return Minecraft.getInstance().font;
     }
 
     // Returns [labelX, labelWidth] for a label whose right edge pins at controlX
@@ -63,6 +68,7 @@ public class TrainSettingsGui extends DLWindow {
 
                 }
         );
+        Tiltbutton.items.add(Component.translatable("realism.gui.tilt.disabled").getString());
         Tiltbutton.items.add(Component.translatable("realism.gui.tilt.none").getString());
         Tiltbutton.items.add(Component.translatable("realism.gui.tilt.passive").getString());
         Tiltbutton.items.add(Component.translatable("realism.gui.tilt.active").getString());
@@ -87,6 +93,7 @@ public class TrainSettingsGui extends DLWindow {
                             GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
                                     List.of(
                                             TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.header").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.disabled").getString()),
                                             TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.none").getString()),
                                             TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.passive").getString()),
                                             TextUtils.text(Component.translatable("realism.gui.tilt.tooltip.active").getString()),
@@ -120,7 +127,9 @@ public class TrainSettingsGui extends DLWindow {
         minSpeedPicker.min.set((double) 0);
         minSpeedPicker.max.set(300.0);
         minSpeedPicker.value.set(cs.customMinSpeed);
-        minSpeedPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //minSpeedPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+
+
 
 
         DLRichTextLabel minSpeedLabel = addComponent(
@@ -129,7 +138,7 @@ public class TrainSettingsGui extends DLWindow {
                         computeLabel("realism.gui.tilt.min_speed.label", 70, 70)[1], 20)
         );
         minSpeedLabel.text.get().set(Component.translatable("realism.gui.tilt.min_speed.label").getString());
-        minSpeedLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //minSpeedLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLNumberPicker maxTiltPicker = addComponent(
                 new DLNumberPicker(75, 95, 80, 20){
@@ -152,7 +161,7 @@ public class TrainSettingsGui extends DLWindow {
         maxTiltPicker.max.set(90.0);
         maxTiltPicker.format.set(new INumberFormatAdapter.DecimalNumberFormat(1));
         maxTiltPicker.value.set((double) cs.customMaxTilt);
-        maxTiltPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+       // maxTiltPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
         maxTiltPicker.step.set(0.1);
 
 
@@ -162,7 +171,7 @@ public class TrainSettingsGui extends DLWindow {
                         computeLabel("realism.gui.tilt.max_tilt.label", 70, 70)[1], 20)
         );
         maxTiltLabel.text.get().set(Component.translatable("realism.gui.tilt.max_tilt.label").getString());
-        maxTiltLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //maxTiltLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLNumberPicker IntensityPicker = addComponent(
                 new DLNumberPicker(75, 120, 80, 20){
@@ -186,7 +195,7 @@ public class TrainSettingsGui extends DLWindow {
         IntensityPicker.max.set(20.0);
         IntensityPicker.format.set(new INumberFormatAdapter.DecimalNumberFormat(1));
         IntensityPicker.value.set((double) cs.customTiltIntensity);
-        IntensityPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+       //IntensityPicker.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
         IntensityPicker.step.set(0.1);
 
 
@@ -198,14 +207,14 @@ public class TrainSettingsGui extends DLWindow {
                 }
         );
         IntensityLabel.text.get().set(Component.translatable("realism.gui.tilt.intensity.label").getString());
-        IntensityLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //IntensityLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLRichTextLabel TiltDirectionLabel = addComponent(
                 new DLRichTextLabel(
                         computeLabel("realism.gui.tilt.direction.label", 72, 70)[0], 155,
                         computeLabel("realism.gui.tilt.direction.label", 72, 70)[1], 20){});
         TiltDirectionLabel.text.get().set(Component.translatable("realism.gui.tilt.direction.label").getString());
-        TiltDirectionLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //TiltDirectionLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
 
         DLCycleButton DirectionButton = addComponent(
@@ -220,33 +229,40 @@ public class TrainSettingsGui extends DLWindow {
                         .withStyle(src.text.get().getStyle())
         ));
         DirectionButton.selectedIndex.set(cs.Inside?0:1);
-        DirectionButton.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
+        //DirectionButton.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         Tiltbutton.addEventListener(DLCycleButton.SelectedItemChanged.class, (src, e) -> {
-            // e.item() is Optional<T>; e.index() is the selected index (or -1)
-            DLCycleButton.SelectedItemChanged te = (DLCycleButton.SelectedItemChanged)  e;
-            if (te.index() == 3) { // Custom selected
-                minSpeedPicker.visible.set(true);
-                maxTiltPicker.visible.set(true);
-                IntensityPicker.visible.set(true);
-                minSpeedLabel.visible.set(true);
-                maxTiltLabel.visible.set(true);
-                IntensityLabel.visible.set(true);
-                DirectionButton.visible.set(true);
-                TiltDirectionLabel.visible.set(true);
-            }
-            else {
-                minSpeedPicker.visible.set(false);
-                maxTiltPicker.visible.set(false);
-                IntensityPicker.visible.set(false);
-                minSpeedLabel.visible.set(false);
-                maxTiltLabel.visible.set(false);
-                IntensityLabel.visible.set(false);
-                DirectionButton.visible.set(false);
-                TiltDirectionLabel.visible.set(false);
-            }
+            int index = ((DLCycleButton.SelectedItemChanged) e).index();
+            syncTiltPickers(index, cs, minSpeedPicker, maxTiltPicker, IntensityPicker, DirectionButton);
+            return false;
+        });
 
-            return false; // return true to stop further propagation if needed
+        // Sync pickers to match the current train settings on window initialization
+        syncTiltPickers((int) Tiltbutton.selectedIndex.get(), cs, minSpeedPicker, maxTiltPicker, IntensityPicker, DirectionButton);
+
+        maxTiltPicker.addEventListener(DLNumberPicker.ValueChangedEvent.class, (src, e)->{
+            if (suppressingPickerEvents) return false;
+            if((int)Tiltbutton.selectedIndex.get() != 4){
+            Tiltbutton.selectedIndex.set(4);}
+            return false;
+        });
+        IntensityPicker.addEventListener(DLNumberPicker.ValueChangedEvent.class, (src, e)->{
+            if (suppressingPickerEvents) return false;
+            if((int)Tiltbutton.selectedIndex.get() != 4){
+                Tiltbutton.selectedIndex.set(4);}
+            return false;
+        });
+        minSpeedPicker.addEventListener(DLNumberPicker.ValueChangedEvent.class, (src, e)->{
+            if (suppressingPickerEvents) return false;
+            if((int)Tiltbutton.selectedIndex.get() != 4){
+                Tiltbutton.selectedIndex.set(4);}
+            return false;
+        });
+        DirectionButton.addEventListener(DLCycleButton.SelectedItemChanged.class, (src, e)->{
+            if (suppressingPickerEvents) return false;
+            if((int)Tiltbutton.selectedIndex.get() != 4){
+                Tiltbutton.selectedIndex.set(4);}
+            return false;
         });
 
         DLCycleButton AccelerationSettingbutton = addComponent(
@@ -350,12 +366,15 @@ public class TrainSettingsGui extends DLWindow {
             TrainSettings ts = new TrainSettings();
             int o = (int) Tiltbutton.selectedIndex.get();
             if (o == 0) {
-                ts.ts = TrainSettings.tiltSetting.NONE;
+                ts.ts = TrainSettings.tiltSetting.DISABLED;
             } else if (o == 1) {
-                ts.ts = TrainSettings.tiltSetting.PASSIVE;
+                ts.ts = TrainSettings.tiltSetting.NONE;
             } else if (o == 2) {
+                ts.ts = TrainSettings.tiltSetting.PASSIVE;
+            } else if (o == 3){
                 ts.ts = TrainSettings.tiltSetting.ACTIVE;
-            } else if (o == 3) {
+            }
+            else if (o == 4) {
                 ts.ts = TrainSettings.tiltSetting.CUSTOM;
                 ts.customMinSpeed = minSpeedPicker.value.get().doubleValue();
                 ts.customMaxTilt = maxTiltPicker.value.get().floatValue();
@@ -385,6 +404,54 @@ public class TrainSettingsGui extends DLWindow {
 
 
 
+
    }
+
+    private void syncTiltPickers(int index, TrainSettings ts,
+                                  DLNumberPicker minSpeed, DLNumberPicker maxTilt,
+                                  DLNumberPicker intensity, DLCycleButton direction) {
+        suppressingPickerEvents = true;
+        try {
+            ts.ts = switch (index) {
+                case 0 -> {
+                    minSpeed.value.set(0.0);
+                    maxTilt.value.set(0.0);
+                    intensity.value.set(0.0);
+                    direction.selectedIndex.set(1);
+                    yield TrainSettings.tiltSetting.DISABLED;
+                }
+                case 1 -> {
+                    minSpeed.value.set(80.0);
+                    maxTilt.value.set(15.0);
+                    intensity.value.set(1.0);
+                    direction.selectedIndex.set(1);
+                    yield TrainSettings.tiltSetting.NONE;
+                }
+                case 2 -> {
+                    minSpeed.value.set(80.0);
+                    maxTilt.value.set(15.0);
+                    intensity.value.set(2.0);
+                    direction.selectedIndex.set(0);
+                    yield TrainSettings.tiltSetting.PASSIVE;
+                }
+                case 3 -> {
+                    minSpeed.value.set(40.0);
+                    maxTilt.value.set(15.0);
+                    intensity.value.set(4.5);
+                    direction.selectedIndex.set(0);
+                    yield TrainSettings.tiltSetting.ACTIVE;
+                }
+                default -> {
+                    minSpeed.value.set(ts.customMinSpeed);
+                    maxTilt.value.set((double) ts.customMaxTilt);
+                    intensity.value.set((double) ts.customTiltIntensity);
+                    direction.selectedIndex.set(1);
+                    yield TrainSettings.tiltSetting.CUSTOM;
+                }
+            };
+        } finally {
+            suppressingPickerEvents = false;
+        }
+    }
 
 }
