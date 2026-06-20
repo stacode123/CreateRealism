@@ -1,6 +1,6 @@
 {
   "realism.overlay.speed_and_percent": "%s km/h %s%%",
-"realism.overlay.speed_and_percent_mph": "%s mph/s %s%%",
+  "realism.overlay.speed_and_percent_mph": "%s mph/s %s%%",
   "realism.overlay.grade_percent": "%s%%",
 
   "realism.screen.title": "Create Realism",

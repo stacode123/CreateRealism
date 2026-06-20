@@ -43,5 +43,5 @@
 
   "realism.network.version_mismatch": "Create: Realism network versions do not match! Server expected %s, client has %s",
 
-  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic"
+  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic(BETA)"
 }

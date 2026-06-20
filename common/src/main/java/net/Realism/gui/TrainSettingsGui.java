@@ -21,11 +21,26 @@ import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.TrainSettingsSavePacket;
 import net.Realism.trains.TrainSettings;
+import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
 public class TrainSettingsGui extends DLWindow {
+
+    private Font getFont() {
+        return net.minecraft.client.Minecraft.getInstance().font;
+    }
+
+    // Returns [labelX, labelWidth] for a label whose right edge pins at controlX
+    private int[] computeLabel(String key, int minWidth, int controlX) {
+        Font font = getFont();
+        String text = Component.translatable(key).getString();
+        int textW = font.width(text);
+        //int finalW = Math.max(minWidth, textW);
+        return new int[]{controlX - textW, textW+10};
+    }
+
     public TrainSettingsGui(DLWindowManager manager, ITrainInterface Rtrain) {
         super(manager);
 
@@ -43,7 +58,7 @@ public class TrainSettingsGui extends DLWindow {
 
 
         DLCycleButton Tiltbutton = addComponent(
-                new DLCycleButton(70, 40, 80, 20){
+                new DLCycleButton(75, 40, 80, 20){
 
 
                 }
@@ -61,7 +76,9 @@ public class TrainSettingsGui extends DLWindow {
         Tiltbutton.selectedIndex.set(cs.ts.ordinal());
 
         DLRichTextLabel tiltLabel = addComponent(
-                new DLRichTextLabel(15, 45, 60, 20) {
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.tilt.label", 70, 70)[0], 45,
+                        computeLabel("realism.gui.tilt.label", 70, 70)[1], 20) {
                     @Override
                     public void renderFrontLayer(DLGuiGraphics g,double mousex, double mousey, Rectangle bounds){
                         super.renderFrontLayer(g,mousex,mousey,bounds);
@@ -107,7 +124,9 @@ public class TrainSettingsGui extends DLWindow {
 
 
         DLRichTextLabel minSpeedLabel = addComponent(
-                new DLRichTextLabel(19, 75, 60, 20)
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.tilt.min_speed.label", 70, 70)[0], 75,
+                        computeLabel("realism.gui.tilt.min_speed.label", 70, 70)[1], 20)
         );
         minSpeedLabel.text.get().set(Component.translatable("realism.gui.tilt.min_speed.label").getString());
         minSpeedLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
@@ -138,7 +157,9 @@ public class TrainSettingsGui extends DLWindow {
 
 
         DLRichTextLabel maxTiltLabel = addComponent(
-                new DLRichTextLabel(29, 100, 60, 20)
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.tilt.max_tilt.label", 70, 70)[0], 100,
+                        computeLabel("realism.gui.tilt.max_tilt.label", 70, 70)[1], 20)
         );
         maxTiltLabel.text.get().set(Component.translatable("realism.gui.tilt.max_tilt.label").getString());
         maxTiltLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
@@ -170,7 +191,9 @@ public class TrainSettingsGui extends DLWindow {
 
 
         DLRichTextLabel IntensityLabel = addComponent(
-                new DLRichTextLabel(5, 125, 72, 20){
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.tilt.intensity.label", 72, 70)[0], 125,
+                        computeLabel("realism.gui.tilt.intensity.label", 72, 70)[1], 20) {
 
                 }
         );
@@ -178,7 +201,9 @@ public class TrainSettingsGui extends DLWindow {
         IntensityLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
         DLRichTextLabel TiltDirectionLabel = addComponent(
-                new DLRichTextLabel(5, 155, 72, 20){});
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.tilt.direction.label", 72, 70)[0], 155,
+                        computeLabel("realism.gui.tilt.direction.label", 72, 70)[1], 20){});
         TiltDirectionLabel.text.get().set(Component.translatable("realism.gui.tilt.direction.label").getString());
         TiltDirectionLabel.visible.set(cs.ts == TrainSettings.tiltSetting.CUSTOM);
 
@@ -241,7 +266,9 @@ public class TrainSettingsGui extends DLWindow {
         AccelerationSettingbutton.selectedIndex.set(cs.as.ordinal());
 
         DLRichTextLabel AccelerationSettingLabel = addComponent(
-                new DLRichTextLabel(165, 45, 105, 20){
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.accel.label", 105, 270)[0], 45,
+                        computeLabel("realism.gui.accel.label", 105, 270)[1], 20){
                     @Override
                     public void renderFrontLayer(DLGuiGraphics g,double mousex, double mousey, Rectangle bounds){
                         super.renderFrontLayer(g,mousex,mousey,bounds);
@@ -281,7 +308,9 @@ public class TrainSettingsGui extends DLWindow {
 
 
         DLRichTextLabel AccelerationLabel = addComponent(
-                new DLRichTextLabel(195, 75, 105, 20)
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.accel.value.label", 105, 270)[0], 75,
+                        computeLabel("realism.gui.accel.value.label", 105, 270)[1], 20)
         );
         AccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.value.label").getString());
         AccelerationLabel.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);

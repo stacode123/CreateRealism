@@ -2,12 +2,16 @@ package net.Realism.datagen;
 
 import com.google.gson.JsonElement;
 import com.simibubi.create.foundation.utility.FilesHelper;
+import com.tterrag.registrate.providers.RegistrateLangProvider;
 import net.Realism.RealismMod;
+import net.createmod.ponder.foundation.PonderIndex;
+import purplecreate.tramways.TPonders;
+
+import java.util.Map;
 
 public class GenLang {
-  public static void generator(Object provider) {
-    // TODO: Fix for 1.21 ProviderType API - commented out for now
-    /*
+  public static void generator(RegistrateLangProvider provider) {
+    PonderIndex.addPlugin(new TPonders());
     PonderIndex.getLangAccess().provideLang(RealismMod.MOD_ID, provider::add);
 
     JsonElement elem = FilesHelper.loadJsonResource("assets/realism/lang/defaults.json");
@@ -17,8 +21,7 @@ public class GenLang {
     }
 
     for (Map.Entry<String, JsonElement> entry : elem.getAsJsonObject().entrySet()) {
-      ((java.util.function.BiConsumer<String, String>) provider).accept(entry.getKey(), entry.getValue().getAsString());
+      provider.add(entry.getKey(), entry.getValue().getAsString());
     }
-    */
   }
 }
