@@ -1,9 +1,10 @@
-## 0.6.3
-### Overlay Fixes
-- Refactored overlay code
-- Updated the algorithm to calculate max speed to make it more realistic
-- Added a config to use MP/H instead of KM/H
-### ETCS
-- Added MP/H config option to use MPH in ETCS
-### Train Settings
-- Fixed the settings button not showing up on curves (K2568)
+## 0.6.4
+### Ported
+- **1.21.1 port**
+### Added
+- **Disabled tilting mode** — New tilt setting to completely disable banking for a train
+- **Chinese (zh-CN) translation** — Full Chinese localization for the mod
+
+### Fixed
+- **Prevented negative needle rotation** on the ETCS speedometer for cleaner visuals
+- **Text positioning is now language-agnostic** — Labels no longer overlap with controls when using longer languages like Chinese
