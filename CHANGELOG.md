@@ -3,7 +3,7 @@
 - **1.21.1 port**
 ### Added
 - **Disabled tilting mode** — New tilt setting to completely disable banking for a train
-- **Chinese (zh-CN) translation** — Full Chinese localization for the mod
+- **Chinese (zh-CN) translation** — Full Chinese localization for the mod (thanks to ChemXiaofu)
 
 ### Fixed
 - **Prevented negative needle rotation** on the ETCS speedometer for cleaner visuals
