@@ -10,6 +10,7 @@ authors="Stacode"
 description='''
 A mod changing the Trains in create to be more realistic
 '''
+logoFile="icon.png"
 
 [[dependencies.realism]]
 modId="neoforge"
