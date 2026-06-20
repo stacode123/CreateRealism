@@ -63,7 +63,13 @@ public class CarriageDimensionalEntityMixin {
         if (!(this$0.train instanceof ITrainInterface Rtrain)){
             return;
         }
-        float banking = realism$calculateBanking(entity,Rtrain);
+        float banking;
+        if(Rtrain.realism$getSettings().isTiltDisabled()){
+            banking = 0;
+        }
+        else{
+            banking = realism$calculateBanking(entity,Rtrain);
+        }
         orientedEntity.realism$setRoll(banking);
         if(!entity.level().isClientSide) {
             RNetworking.sendToAll(new RollSyncPacket(orientedEntity.realism$getRoll(), orientedEntity.realism$getPrevRoll(), orientedEntity.getuid()));

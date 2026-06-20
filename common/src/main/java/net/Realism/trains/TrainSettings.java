@@ -5,7 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 
 public class TrainSettings {
     public enum tiltSetting{
-        NONE,PASSIVE,ACTIVE,CUSTOM;
+        DISABLED, NONE,PASSIVE,ACTIVE,CUSTOM;
     }
     public enum accelerationSetting{
         NONE,REALISTIC, CUSTOM;
@@ -32,6 +32,9 @@ public class TrainSettings {
     public boolean isInside() {
         return Inside;
     }
+
+    public boolean isTiltDisabled() {
+        return  ts== tiltSetting.DISABLED;};
 
     public boolean isTiltActive() {
         return ts == tiltSetting.ACTIVE;

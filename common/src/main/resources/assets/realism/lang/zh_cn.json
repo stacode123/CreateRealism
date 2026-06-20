@@ -7,11 +7,13 @@
 
   "realism.gui.train_settings.title": "Create: Realism | 列车配置",
 
+  "realism.gui.tilt.disabled": "Disabled",
   "realism.gui.tilt.none": "禁用倾摆",
   "realism.gui.tilt.passive": "被动倾摆",
   "realism.gui.tilt.active": "主动倾摆",
   "realism.gui.tilt.custom": "自定义",
   "realism.gui.tilt.tooltip.header": "列车倾摆设置",
+  "realism.gui.tilt.tooltip.disabled": "Disabled: No Force",
   "realism.gui.tilt.tooltip.none": "禁用倾摆: 仅离心倾摆 (最大 2°)",
   "realism.gui.tilt.tooltip.passive": "被动倾摆: 被动倾摆以抵消侧向力 (最大 4°)",
   "realism.gui.tilt.tooltip.active": "被动倾摆: 主动倾摆以抵消侧向力 (最大 >8°)",

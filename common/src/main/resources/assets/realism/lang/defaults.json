@@ -7,11 +7,13 @@
 
   "realism.gui.train_settings.title": "Create: Realism Train Settings",
 
+  "realism.gui.tilt.disabled": "Disabled",
   "realism.gui.tilt.none": "None",
   "realism.gui.tilt.passive": "Passive",
   "realism.gui.tilt.active": "Active",
   "realism.gui.tilt.custom": "Custom",
   "realism.gui.tilt.tooltip.header": "Select the train's tilt setting.",
+  "realism.gui.tilt.tooltip.disabled": "Disabled: No Force",
   "realism.gui.tilt.tooltip.none": "None: Only Centrifugal forces. (Max 2°)",
   "realism.gui.tilt.tooltip.passive": "Passive: Passively tilts to counteract lateral forces. (Max 4°)",
   "realism.gui.tilt.tooltip.active": "Active: Actively tilts to counteract lateral forces. (Max >8°)",
