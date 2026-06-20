@@ -44,7 +44,7 @@ dependencies {
     modLocalRuntime("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}") { transitive = false }
 
     // modCompileOnly("purplecreate.tramways:tramways-neoforge:$tramways_version-mc1.21.1-neoforge")
-    // modRuntimeOnly("purplecreate.tramways:tramways-neoforge:$tramways_version-mc1.21.1-neoforge")
+    modRuntimeOnly("purplecreate.tramways:tramways:$tramways_version-mc1.21.1-neoforge")
     modImplementation("curse.maven:journeymap-32274:5457831")
 
     modImplementation("de.mrjulsen.mcdragonlib:dragonlib-neoforge:$minecraft_version-$dragonlib_version")

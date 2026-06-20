@@ -128,7 +128,7 @@ tasks.create("publishRealism") {
         case "fabric":
             dependsOn "${platform}:build", "${platform}:publishMods"
             break
-        case "forge":
+        case "neoforge":
             dependsOn "${platform}:build", "${platform}:publishMods"
             break
     }
