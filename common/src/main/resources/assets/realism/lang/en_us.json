@@ -42,5 +42,27 @@
 
   "realism.network.version_mismatch": "Create: Realism network versions do not match! Server expected %s, client has %s",
 
-  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic"
+  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic",
+
+  "item.realism.advanced_schedule": "Advanced Train Schedule",
+
+  "realism.graph.no_network": "No rail network found near this track",
+  "realism.graph.too_large": "Rail network too large to map (%s nodes, cap %s)",
+
+  "realism.map.title": "Rail Network Map",
+  "realism.map.dimension": "Dimension: %s",
+  "realism.map.station_names": "Station names: %s",
+  "realism.map.hint": "Drag to pan, scroll to zoom, hover a track for details",
+  "realism.map.other_networks": "Grey lines are separate networks — click their track in-world for their map",
+  "realism.map.edge.length": "Length: %s m",
+  "realism.map.edge.speed_here": "Advised curve speed: %s km/h",
+  "realism.map.edge.speed_min": "Slowest curve on section: %s km/h",
+  "realism.map.edge.signal": "Signal at entry: %s (towards %s)",
+  "realism.map.node.signal": "%s (towards %s)",
+  "realism.map.signal.entry": "Block signal",
+  "realism.map.signal.chain": "Chain signal",
+  "realism.map.signal.none": "No signal head",
+  "realism.map.edge.station": "Station: %s",
+  "realism.map.edge.crossings": "Level crossings: %s",
+  "realism.map.edge.sign": "Tram sign limit: %s km/h (towards %s)"
 }

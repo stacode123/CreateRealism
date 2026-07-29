@@ -57,6 +57,11 @@ dependencies {
     modLocalRuntime("maven.modrinth:lazydfu:${lazydfu_version}")
     modLocalRuntime("com.terraformersmc:modmenu:${modmenu_version}")
 
+    // Create Railways Navigator, dev runtime only, for schedule-editor compat testing (version id = 1.20.1-beta-0.9.1-C6 fabric).
+    // modCompileOnly puts CRN in the same remap group as Create, so its calls into Create widgets resolve in dev.
+    modCompileOnly("maven.modrinth:create-railways-navigator:Byo7nLl9") { transitive = false }
+    modLocalRuntime("maven.modrinth:create-railways-navigator:Byo7nLl9") { transitive = false }
+
     switch (fabric_recipe_viewer.toLowerCase(Locale.ROOT)) {
         case "jei": modLocalRuntime("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}"); break
         case "rei": modLocalRuntime("me.shedaniel:RoughlyEnoughItems-fabric:${rei_version}"); break
@@ -70,7 +75,8 @@ dependencies {
 
     modImplementation "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
 
-    modImplementation(include("de.mrjulsen.mcdragonlib:dragonlib-fabric:$minecraft_version-$dragonlib_version"))
+    // DragonLib's own maven (maven.lounode.top) is unreachable; Modrinth maven, version id = 1.20.1-beta-3.0.28 fabric
+    modImplementation(include("maven.modrinth:dragonlib:uz4tlLzk"))
 }
 
 processResources {

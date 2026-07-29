@@ -8,13 +8,16 @@
     "client.StationScreenMixin",
     "client.TrackPlacementMixin",
     "mixinaccesors.PlacementInfoAccessor",
+    "mixinaccesors.ScheduleScreenAccessor",
     "mixinaccesors.ScreenAccessor"
   ],
   "mixins": [
     "BezierConnectionMixin",
     "CarriageDimensionalEntityMixin",
+    "ConductorBlockInteractionMixin",
     "OrientedContraptionEntityMixin",
     "ScheduleRuntimeMixin",
+    "StationBlockEntityMixin",
     "TrainMixin",
     "mixinaccesors.TramSignDataAccessor"
   ],

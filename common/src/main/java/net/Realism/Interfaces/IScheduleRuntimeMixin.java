@@ -8,4 +8,6 @@ public interface IScheduleRuntimeMixin {
     void setLastScheduledDepartureDate(int date);
     boolean dontCheck();
     void setDontCheck(boolean dontCheck);
+    boolean isAdvancedSchedule();
+    void setAdvancedSchedule(boolean advancedSchedule);
 }

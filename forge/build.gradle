@@ -47,8 +47,14 @@ dependencies {
     modCompileOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge")
     modRuntimeOnly("purplecreate.tramways:tramways-forge:$tramways_version-mc1.20.1-forge")
 
+    // Create Railways Navigator, dev runtime only, for schedule-editor compat testing (version id = 1.20.1-beta-0.9.1-C6 forge).
+    // modCompileOnly puts CRN in the same remap group as Create, so its calls into Create widgets resolve in dev.
+    modCompileOnly("maven.modrinth:create-railways-navigator:r5q4MIYy") { transitive = false }
+    modLocalRuntime("maven.modrinth:create-railways-navigator:r5q4MIYy") { transitive = false }
+
     modImplementation "dev.architectury:architectury-forge:$rootProject.architectury_api_version"
-    modImplementation("de.mrjulsen.mcdragonlib:dragonlib-forge:$minecraft_version-$dragonlib_version")
+    // DragonLib's own maven (maven.lounode.top) is unreachable; Modrinth maven, version id = 1.20.1-beta-3.0.28 forge
+    modImplementation("maven.modrinth:dragonlib:RWduTzyi")
 
     modImplementation("curse.maven:journeymap-32274:5457831")}
 

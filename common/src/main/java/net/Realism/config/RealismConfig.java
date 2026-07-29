@@ -10,6 +10,7 @@ public class RealismConfig {
         public final ForgeConfigSpec.BooleanValue EnableCustomTrainAcceleration;
         public final ForgeConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
         public final ForgeConfigSpec.BooleanValue AllowBiggerValuesTrains;
+        public final ForgeConfigSpec.IntValue GraphNodeCap;
 
         Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -28,6 +29,10 @@ public class RealismConfig {
             builder.push("ETCS");
             GlobalETCSEnable = builder.comment("Enable ETCS for all trains")
                     .define("Global ETCS Enable", true);
+            builder.pop();
+            builder.push("Advanced Schedule");
+            GraphNodeCap = builder.comment("Maximum track node count a rail network may have to be translated for the map viewer/simulator")
+                    .defineInRange("Graph Node Cap", 4000, 100, 100000);
             builder.pop();
             builder.pop();
         }

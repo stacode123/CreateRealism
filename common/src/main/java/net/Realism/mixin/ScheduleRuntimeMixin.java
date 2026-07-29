@@ -6,7 +6,9 @@ import com.simibubi.create.content.trains.graph.DiscoveredPath;
 import com.simibubi.create.content.trains.schedule.Schedule;
 import com.simibubi.create.content.trains.schedule.ScheduleRuntime;
 import net.Realism.Interfaces.IScheduleRuntimeMixin;
+import net.Realism.foundation.util.AllRealismItems;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -49,6 +51,8 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
     public int lastScheduledDepartureDate = 0;
     @Unique
     public boolean dontCheck = false;
+    @Unique
+    public boolean advancedSchedule = false;
 
 
     @Inject(method = "tick",at=@At("HEAD"))
@@ -81,6 +85,7 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
     public void setSchedule(Schedule schedule, boolean auto, CallbackInfo ci) {
          shouldUpdateDepartureDate = true;
          setDontCheck(false);
+         advancedSchedule = false;
     }
 
     @Inject(method = "reset", at=@At("TAIL"))
@@ -123,6 +128,28 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
         this.dontCheck = dontCheck;
     }
 
+    @Override
+    public boolean isAdvancedSchedule() {
+        return advancedSchedule;
+    }
+    @Override
+    public void setAdvancedSchedule(boolean advancedSchedule) {
+        this.advancedSchedule = advancedSchedule;
+    }
+
+    @Inject(method = "returnSchedule", at = @At("RETURN"), cancellable = true)
+    public void returnAdvancedSchedule(CallbackInfoReturnable<ItemStack> cir) {
+        if (!advancedSchedule)
+            return;
+        advancedSchedule = false;
+        ItemStack vanilla = cir.getReturnValue();
+        if (vanilla.isEmpty())
+            return;
+        ItemStack advanced = AllRealismItems.ADVANCED_SCHEDULE.asStack();
+        advanced.setTag(vanilla.getTag());
+        cir.setReturnValue(advanced);
+    }
+
 
     @Inject(method = "startCurrentInstruction", at=@At("RETURN"))
     public void startCurrentInstruction(Level level, CallbackInfoReturnable<DiscoveredPath> cir) {
@@ -159,6 +186,7 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
         tag.putLong("expectedArrivalDate", expectedArrivalDate);
         tag.putInt("lastScheduledDepartureDate", lastScheduledDepartureDate);
         tag.putBoolean("dontCheck", dontCheck);
+        tag.putBoolean("advancedSchedule", advancedSchedule);
         cir.setReturnValue(tag);
 
     }
@@ -169,5 +197,6 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
         expectedArrivalDate = tag.getLong("expectedArrivalDate");
         lastScheduledDepartureDate = tag.getInt("lastScheduledDepartureDate");
         dontCheck = tag.getBoolean("dontCheck");
+        advancedSchedule = tag.getBoolean("advancedSchedule");
     }
 }

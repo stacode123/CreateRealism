@@ -2,8 +2,6 @@ package net.Realism;
 
 
 import com.simibubi.create.foundation.data.CreateRegistrate;
-import net.Realism.content.graph.BlockGraphManager;
-import net.Realism.content.simulator.SimulationManager;
 import net.Realism.foundation.util.AllMenuTypes;
 import net.Realism.foundation.util.AllRealismItems;
 import net.minecraft.resources.ResourceLocation;
@@ -15,8 +13,6 @@ public class RealismMod {
     public static final String NAME = "Create Realism";
     public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
     public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID);
-    public static final BlockGraphManager GRAPH_MANAGER = new BlockGraphManager();
-    public static final SimulationManager SIMULATION_MANAGER = new SimulationManager(GRAPH_MANAGER);
 
     public static void init() {
         RealismSounds.SOUND_EVENTS.register();

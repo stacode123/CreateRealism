@@ -151,6 +151,19 @@ public class TramwaysCompat {
         }
     }
 
+    /**
+     * Speed limit in km/h a tram sign imposes on travel toward {@code towardNode},
+     * or 0 when it carries none (or Tramways is absent).
+     */
+    public static double getSignCapKmh(Object tramSign, Object towardNode, double maxSpeedKmh) {
+        if (!tramwaysLoaded) return 0;
+        try {
+            return TramwaysCompatImpl.getSignCapKmh(tramSign, towardNode, maxSpeedKmh);
+        } catch (Throwable e) {
+            return 0;
+        }
+    }
+
     // Only loaded if Tramways exists
     private static class TramwaysCompatImpl {
         static Object createTramSignInfo(UUID signId, double distance, Object signType, boolean primary) {
@@ -164,6 +177,37 @@ public class TramwaysCompat {
 
         static boolean isPrimary(Object tramSign, Object node) {
             return ((purplecreate.tramways.content.signs.TramSignPoint)tramSign).isPrimary((com.simibubi.create.content.trains.graph.TrackNode)node);
+        }
+
+        @SuppressWarnings("unchecked")
+        static double getSignCapKmh(Object tramSign, Object towardNode, double maxSpeedKmh) throws Exception {
+            TramSignPoint sign = (TramSignPoint) tramSign;
+            boolean primary = sign.isPrimary((com.simibubi.create.content.trains.graph.TrackNode) towardNode);
+            Couple<Set<TramSignPoint.SignData>> sides;
+            if (sign instanceof ITramSignPoint iSign) {
+                sides = iSign.getSides();
+            } else {
+                java.lang.reflect.Field sidesField = TramSignPoint.class.getDeclaredField("sides");
+                sidesField.setAccessible(true);
+                sides = (Couple<Set<TramSignPoint.SignData>>) sidesField.get(sign);
+            }
+            if (sides == null || sides.get(primary) == null) return 0;
+            double best = 0;
+            for (TramSignPoint.SignData data : new HashSet<>(sides.get(primary))) {
+                if (data == null) continue;
+                CompoundTag tag;
+                if (data instanceof TramSignDataAccessor accessor) {
+                    tag = accessor.getDemandExtra();
+                } else {
+                    java.lang.reflect.Field extraField = TramSignPoint.SignData.class.getDeclaredField("demandExtra");
+                    extraField.setAccessible(true);
+                    tag = (CompoundTag) extraField.get(data);
+                }
+                if (tag == null || !tag.contains("Throttle")) continue;
+                double kmh = tag.getInt("Throttle") / 100.0 * maxSpeedKmh;
+                if (kmh > 0) best = best == 0 ? kmh : Math.min(best, kmh);
+            }
+            return best;
         }
     }
 }

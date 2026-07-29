@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class RNetworking {
-    private static final String VERSION = "4";
+    private static final String VERSION = "6";
     private static int id = 0;
 
     private static final Map<Class<? extends C2SPacket>, Integer> c2sIdentifiers = new HashMap<>();
@@ -168,13 +168,17 @@ public class RNetworking {
                 TrainSettingsUpdatePacket.class,
                 TrainSettingsUpdatePacket::read
         );
+        registerC2S(
+                RequestGraphViewPacket.class,
+                RequestGraphViewPacket::read
+        );
         registerS2C(
-                OpenSimulatedSchedulePacket.class,
-                OpenSimulatedSchedulePacket::read
+                GraphViewPacket.class,
+                GraphViewPacket::read
         );
         registerC2S(
-                SaveAdvancedSchedule.class,
-                SaveAdvancedSchedule::read
+                AdvancedScheduleSavePacket.class,
+                AdvancedScheduleSavePacket::read
         );
     }
 }
