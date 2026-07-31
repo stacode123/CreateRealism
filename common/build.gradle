@@ -17,6 +17,23 @@ dependencies {
     modRuntimeOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common")
     // DragonLib's own maven (maven.lounode.top) is unreachable; Modrinth maven, version id = 1.20.1-beta-3.0.28 fabric
     modImplementation("maven.modrinth:dragonlib:uz4tlLzk")
+
+    // The simulator core (content/simulator/core) is Minecraft-free by design;
+    // these tests run it on synthetic graphs without a game.
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+test {
+    useJUnitPlatform()
+    // Opt-in perf benchmark (SimEngineBenchmarkTest): -Dsim.benchmark=true
+    systemProperty "sim.benchmark", System.getProperty("sim.benchmark", "false")
+    testLogging {
+        events "failed", "skipped"
+        exceptionFormat "full"
+        showStandardStreams = System.getProperty("sim.benchmark") == "true"
+    }
 }
 
 sourceSets {

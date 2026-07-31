@@ -11,6 +11,10 @@ public class RealismConfig {
         public final ForgeConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
         public final ForgeConfigSpec.BooleanValue AllowBiggerValuesTrains;
         public final ForgeConfigSpec.IntValue GraphNodeCap;
+        public final ForgeConfigSpec.IntValue SimMaxHorizonHours;
+        public final ForgeConfigSpec.IntValue SimCooldownSeconds;
+        public final ForgeConfigSpec.IntValue SimMaxConcurrent;
+        public final ForgeConfigSpec.IntValue SimMaxWallSeconds;
 
         Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -33,6 +37,14 @@ public class RealismConfig {
             builder.push("Advanced Schedule");
             GraphNodeCap = builder.comment("Maximum track node count a rail network may have to be translated for the map viewer/simulator")
                     .defineInRange("Graph Node Cap", 4000, 100, 100000);
+            SimMaxHorizonHours = builder.comment("Longest timetable simulation a player may request, in in-game hours (1000 ticks each)")
+                    .defineInRange("Sim Max Horizon Hours", 48, 1, 336);
+            SimCooldownSeconds = builder.comment("Seconds a player must wait between simulation requests")
+                    .defineInRange("Sim Cooldown Seconds", 10, 0, 3600);
+            SimMaxConcurrent = builder.comment("Maximum simulations running at the same time across all players")
+                    .defineInRange("Sim Max Concurrent", 2, 1, 8);
+            SimMaxWallSeconds = builder.comment("Real-time seconds a single simulation may compute before its results are cut off")
+                    .defineInRange("Sim Max Wall Seconds", 10, 1, 120);
             builder.pop();
             builder.pop();
         }

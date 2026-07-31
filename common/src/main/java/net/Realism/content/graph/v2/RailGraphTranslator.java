@@ -35,8 +35,12 @@ import java.util.Set;
  */
 public class RailGraphTranslator {
 
-    /** {@code graph == null} means the network exceeded the node cap. */
-    public record Result(RailGraph graph, int microNodeCount) {}
+    /**
+     * {@code graph == null} means the network exceeded the node cap.
+     * {@code topology} is the server-only simulator sidecar (never synced).
+     */
+    public record Result(RailGraph graph, net.Realism.content.simulator.SimTopology topology,
+                         int microNodeCount) {}
 
     private static final Comparator<TrackNodeLocation> LOCATION_ORDER = Comparator
             .comparing((TrackNodeLocation l) -> l.dimension == null ? "" : l.dimension.location().toString())
@@ -50,6 +54,7 @@ public class RailGraphTranslator {
         double dist;
         SignalBoundary signal;
         Vec3 position;
+        Vec3 tangent;
         boolean governsForward;
         boolean governsBackward;
         SignalType typeForward;
@@ -64,17 +69,22 @@ public class RailGraphTranslator {
 
     private record ShapePoint(double dist, Vec3 position) {}
 
+    private record MicroSeg(int fromNetId, int toNetId, double segStart, double segLength) {}
+
     /** One collapsed degree-2 chain between two boundary nodes. */
     private static class Walk {
         TrackNode start;
         TrackNode end;
         double length;
         boolean interDimensional;
+        Vec3 startTangent = new Vec3(1, 0, 0);
+        Vec3 endTangent = new Vec3(1, 0, 0);
         final List<Cut> cuts = new ArrayList<>();
         final List<StationPoint> stations = new ArrayList<>();
         final List<CrossingPoint> crossings = new ArrayList<>();
         final List<SignPoint> signs = new ArrayList<>();
         final List<ShapePoint> shape = new ArrayList<>();
+        final List<MicroSeg> microSegments = new ArrayList<>();
         /** Per micro-segment [startDist, endDist, capKmh] for curvature caps. */
         final List<double[]> segmentCaps = new ArrayList<>();
     }
@@ -87,6 +97,7 @@ public class RailGraphTranslator {
     private final Map<SignalBoundary, Integer> signalNodeIds = new IdentityHashMap<>();
     private final Map<String, Integer> dimensionIndices = new LinkedHashMap<>();
     private RailGraph result;
+    private net.Realism.content.simulator.SimTopology topology;
     private final double maxTrainSpeedKmh;
 
     private RailGraphTranslator(TrackGraph source) {
@@ -104,7 +115,7 @@ public class RailGraphTranslator {
         List<TrackNodeLocation> sortedLocations = new ArrayList<>(source.getNodes());
         sortedLocations.sort(LOCATION_ORDER);
         if (sortedLocations.size() > nodeCap)
-            return new Result(null, sortedLocations.size());
+            return new Result(null, null, sortedLocations.size());
 
         for (TrackNodeLocation location : sortedLocations) {
             TrackNode node = source.locateNode(location);
@@ -131,6 +142,7 @@ public class RailGraphTranslator {
         }
 
         result = new RailGraph(source.id, source.getChecksum());
+        topology = new net.Realism.content.simulator.SimTopology();
 
         List<Walk> walks = new ArrayList<>();
         for (Map.Entry<TrackNode, List<TrackNode>> entry : adjacency.entrySet()) {
@@ -158,7 +170,7 @@ public class RailGraphTranslator {
             emit(walk);
 
         result.linkNodes();
-        return new Result(result, sortedLocations.size());
+        return new Result(result, topology, sortedLocations.size());
     }
 
     private static long segmentKey(TrackNode from, TrackNode to) {
@@ -204,6 +216,10 @@ public class RailGraphTranslator {
 
     private void collectSegment(Walk walk, TrackNode from, TrackNode to, TrackEdge edge, double startDist) {
         double edgeLength = edge.getLength();
+        if (walk.microSegments.isEmpty())
+            walk.startTangent = edge.getDirection(true);
+        walk.endTangent = edge.getDirection(false);
+        walk.microSegments.add(new MicroSeg(from.getNetId(), to.getNetId(), startDist, edgeLength));
         walk.shape.add(new ShapePoint(startDist, nodePosition(from)));
         if (edge.isTurn() && edgeLength > 2) {
             int samples = Math.max(2, Math.min(8, (int) (edgeLength / 4)));
@@ -224,6 +240,7 @@ public class RailGraphTranslator {
                 cut.dist = dist;
                 cut.signal = signal;
                 cut.position = positionOnSegment(edge, locOn);
+                cut.tangent = edgeLength > 0 ? edge.getDirectionAt(locOn) : edge.getDirection(true);
                 boolean towardSecond = signal.isPrimary(to);
                 cut.governsForward = !signal.blockEntities.get(towardSecond).isEmpty();
                 cut.typeForward = signal.types.get(towardSecond);
@@ -264,6 +281,9 @@ public class RailGraphTranslator {
         anchors.add(walk.end);
         distances.add(walk.length);
 
+        int[] forwardIds = new int[anchors.size() - 1];
+        int[] backwardIds = new int[anchors.size() - 1];
+
         for (int i = 0; i < anchors.size() - 1; i++) {
             double a = distances.get(i);
             double b = distances.get(i + 1);
@@ -289,6 +309,13 @@ public class RailGraphTranslator {
             result.edges.add(backward);
             forward.oppositeId = backward.id;
             backward.oppositeId = forward.id;
+            forwardIds[i] = forward.id;
+            backwardIds[i] = backward.id;
+
+            Vec3 entryTangent = anchors.get(i) instanceof Cut cut ? cut.tangent : walk.startTangent;
+            Vec3 exitTangent = anchors.get(i + 1) instanceof Cut cut ? cut.tangent : walk.endTangent;
+            topology.addEdge(entryTangent, exitTangent, forwardSignCap);
+            topology.addEdge(exitTangent.scale(-1), entryTangent.scale(-1), backwardSignCap);
 
             for (StationPoint station : walk.stations) {
                 if (station.dist() < a || station.dist() > b)
@@ -340,6 +367,14 @@ public class RailGraphTranslator {
             for (int j = forward.shape.size() - 1; j >= 0; j--)
                 backward.shape.add(forward.shape.get(j));
         }
+
+        double[] bounds = new double[distances.size()];
+        for (int i = 0; i < distances.size(); i++)
+            bounds[i] = distances.get(i);
+        int walkIndex = topology.addWalk(bounds, forwardIds, backwardIds);
+        for (MicroSeg segment : walk.microSegments)
+            topology.addMicroSegment(walkIndex, segment.fromNetId(), segment.toNetId(),
+                    segment.segStart(), segment.segLength());
     }
 
     /** Min curvature cap over micro segments overlapping [a, b]; 0 = uncapped. */
