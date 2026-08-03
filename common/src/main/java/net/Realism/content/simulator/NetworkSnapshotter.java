@@ -103,6 +103,7 @@ public class NetworkSnapshotter {
         spec.canReverse = train.doubleEnded;
         spec.initialSpeed = Math.min(Math.abs(train.speed), train.maxSpeed());
         spec.notices.addAll(notices);
+        spec.liveAnchored = program == null || !hasTimeAnchor(program);
 
         if (program == null) {
             excluded.add(new Excluded(name, obstacleReason, obstacleDetail));

@@ -5,32 +5,24 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.Realism.content.graph.v2.RailCrossing;
-import net.Realism.content.graph.v2.RailEdge;
-import net.Realism.content.graph.v2.RailGraph;
-import net.Realism.content.graph.v2.RailNode;
-import net.Realism.content.graph.v2.RailSign;
-import net.Realism.content.graph.v2.RailStation;
-import net.Realism.content.graph.v2.SignalKind;
 import com.mojang.math.Axis;
+import net.Realism.content.graph.v2.*;
+import net.Realism.content.simulator.SimulationPayload;
+import net.Realism.content.simulator.core.SimConflict;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Top-down 2D viewer for a {@link RailGraph}: edges as polylines, markers for
@@ -53,12 +45,17 @@ public class GraphMapScreen extends Screen {
     private static final int COLOR_STATION = 0xFF55DDEE;
     private static final int COLOR_CROSSING = 0xFFFFE040;
     private static final int COLOR_SIGN = 0xFFDD88FF;
+    /** Conflict badge colors, indexed by {@code SimConflict.Type} ordinal. */
+    private static final int[] COLOR_CONFLICT = { 0xFFFF6040, 0xFFDD2222, 0xFFFFC020, 0xFF40C0FF };
 
     private final RailGraph graph;
     /** Nearby separate networks, drawn dimmed and non-interactive. */
     private final List<RailGraph> contextGraphs;
     private final BlockPos focus;
     private final String focusDimension;
+
+    /** Conflicts from the last simulation, drawn as badges (M5). */
+    private final List<SimulationPayload.ConflictLine> conflicts;
 
     private int dimensionIndex;
     private double centerX;
@@ -67,6 +64,7 @@ public class GraphMapScreen extends Screen {
     private int highlightedEdge = -1;
     private int hoveredEdge = -1;
     private int hoveredNode = -1;
+    private int hoveredConflict = -1;
     private double hoveredOffset = 0;
     private boolean showStationNames = true;
     private Button dimensionButton;
@@ -79,6 +77,8 @@ public class GraphMapScreen extends Screen {
         super(Component.translatable("realism.map.title"));
         this.graph = graph;
         this.contextGraphs = contextGraphs;
+        this.conflicts = SimulationClientData.lastResults == null
+                ? List.of() : SimulationClientData.lastResults.conflicts;
         this.focus = focus;
         this.focusDimension = dimension;
         this.centerX = focus.getX() + 0.5;
@@ -166,6 +166,7 @@ public class GraphMapScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         hoveredEdge = nearestEdgeOnScreen(mouseX, mouseY, 8);
         hoveredNode = nearestSignalNode(mouseX, mouseY, 7);
+        hoveredConflict = nearestConflict(mouseX, mouseY, 8);
 
         Matrix4f matrix = graphics.pose().last().pose();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
@@ -261,6 +262,17 @@ public class GraphMapScreen extends Screen {
             }
         }
 
+        String currentDimension = graph.dimensions.get(dimensionIndex);
+        for (var conflict : conflicts) {
+            if (!conflict.dimension().equals(currentDimension))
+                continue;
+            double x = toScreenX(conflict.x() + 0.5);
+            double y = toScreenY(conflict.z() + 0.5);
+            diamond(buffer, matrix, x, y, 5.5, 0xFF101018);
+            diamond(buffer, matrix, x, y, 4,
+                    COLOR_CONFLICT[conflict.type() % COLOR_CONFLICT.length]);
+        }
+
         tesselator.end();
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
@@ -310,10 +322,64 @@ public class GraphMapScreen extends Screen {
 
         super.render(graphics, mouseX, mouseY, partialTicks);
 
-        if (hoveredNode >= 0)
+        if (hoveredConflict >= 0)
+            graphics.renderComponentTooltip(font, conflictTooltip(conflicts.get(hoveredConflict)),
+                    mouseX, mouseY);
+        else if (hoveredNode >= 0)
             graphics.renderComponentTooltip(font, nodeTooltip(graph.node(hoveredNode)), mouseX, mouseY);
         else if (hoveredEdge >= 0)
             graphics.renderComponentTooltip(font, edgeTooltip(graph.edges.get(hoveredEdge)), mouseX, mouseY);
+    }
+
+    /** Nearest visible conflict badge within maxPixels, or -1. */
+    private int nearestConflict(double screenX, double screenY, double maxPixels) {
+        if (conflicts.isEmpty())
+            return -1;
+        String currentDimension = graph.dimensions.get(dimensionIndex);
+        int best = -1;
+        double bestDistance = maxPixels;
+        for (int i = 0; i < conflicts.size(); i++) {
+            var conflict = conflicts.get(i);
+            if (!conflict.dimension().equals(currentDimension))
+                continue;
+            double distance = Math.hypot(toScreenX(conflict.x() + 0.5) - screenX,
+                    toScreenY(conflict.z() + 0.5) - screenY);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    private List<Component> conflictTooltip(SimulationPayload.ConflictLine conflict) {
+        SimulationPayload payload = SimulationClientData.lastResults;
+        List<Component> lines = new ArrayList<>();
+        String type = Component.translatable("realism.gui.simres.conflict."
+                + SimConflict.Type.values()[conflict.type()].name())
+                .getString();
+        lines.add(Component.literal(type
+                + (conflict.resourceName().isEmpty() ? "" : " - " + conflict.resourceName())
+                + (conflict.count() > 1 ? " x" + conflict.count() : "")));
+        if (payload != null)
+            lines.add(Component.translatable("realism.gui.simres.conflict.window",
+                    SimTimeFormat.time(payload, conflict.startTick()),
+                    SimTimeFormat.time(payload, conflict.endTick())));
+        lines.add(Component.translatable("realism.gui.simres.conflict.trains",
+                String.join(", ", conflict.trainNames())));
+        return lines;
+    }
+
+    private static void diamond(BufferBuilder buffer, Matrix4f matrix,
+                                double x, double y, double half, int color) {
+        float a = (color >>> 24 & 0xFF) / 255f;
+        float r = (color >>> 16 & 0xFF) / 255f;
+        float g = (color >>> 8 & 0xFF) / 255f;
+        float b = (color & 0xFF) / 255f;
+        buffer.vertex(matrix, (float) x, (float) (y - half), 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, (float) (x - half), (float) y, 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, (float) x, (float) (y + half), 0).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, (float) (x + half), (float) y, 0).color(r, g, b, a).endVertex();
     }
 
     /**

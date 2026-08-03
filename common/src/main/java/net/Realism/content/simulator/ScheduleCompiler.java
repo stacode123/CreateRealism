@@ -57,6 +57,11 @@ public class ScheduleCompiler {
             switch (id) {
                 case "create:destination" ->
                         entry = SimProgram.Entry.destination(data.getString("Text"));
+                // Full CRN semantics: filters tried in priority order, first
+                // reachable one wins; "AvoidTrains" prefers a later filter
+                // over a busy station. "AvoidRedSignal" only counts signals
+                // around the train itself — the same for every filter — so
+                // it can never change which filter wins and is ignored.
                 case "createrailwaysnavigator:prioritized_destination_instruction" -> {
                     List<String> filters = new ArrayList<>();
                     data.getList("Filters", Tag.TAG_STRING).forEach(tag -> filters.add(tag.getAsString()));
@@ -64,8 +69,8 @@ public class ScheduleCompiler {
                         problems.add(new Problem("realism.sim.problem.empty_destination", id));
                         continue;
                     }
-                    entry = SimProgram.Entry.destination(filters.get(0));
-                    notices.add("realism.sim.notice.prioritized_destination");
+                    entry = SimProgram.Entry.destinationPrioritized(filters,
+                            data.getBoolean("AvoidTrains"));
                 }
                 case "create:throttle" ->
                         entry = SimProgram.Entry.throttle(
@@ -85,7 +90,13 @@ public class ScheduleCompiler {
                             (data.contains("Value") ? data.getInt("Value") : 100) / 100.0);
                     notices.add("realism.sim.notice.primary_limit");
                 }
-                case "create:rename", "createrailwaysnavigator:reset_timings" ->
+                // SnR waypoint: same "Text" glob as a destination, but the
+                // train rolls through without stopping.
+                case "railways:waypoint_destination" ->
+                        entry = SimProgram.Entry.waypointDestination(data.getString("Text"));
+                // Fires a redstone link pulse; never moves the train.
+                case "create:rename", "createrailwaysnavigator:reset_timings",
+                        "railways:redstone_link" ->
                         entry = SimProgram.Entry.noOp();
                 case "createrailwaysnavigator:travel_section" -> {
                     lineToken = lineToken(data);
@@ -141,6 +152,11 @@ public class ScheduleCompiler {
                         rotationTicks(data.getInt("Rotation")));
             case "realism:time_of_day_realistic":
                 return new SimCondition.TimeOfDayRealistic(data.getInt("Hour"), data.getInt("Minute"));
+            // SnR "station loaded": waits for the station's chunk, which
+            // depends on live players — the projection assumes it is loaded.
+            case "railways:loaded":
+                notices.add("realism.sim.notice.station_loaded");
+                return new SimCondition.Delay(0);
             case "createrailwaysnavigator:dynamic_delay":
                 return new SimCondition.DynamicDelay(timedTicks(data),
                         data.getInt("Min") * unitTicks(data));

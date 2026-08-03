@@ -1,10 +1,6 @@
 package net.Realism.content.simulator.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -15,10 +11,10 @@ import java.util.regex.Pattern;
  * <p>Movement, signalling and condition semantics deliberately mirror Create
  * 6.0.8 ({@code Navigation.tick}, {@code ScheduleRuntime}, {@code
  * SignalEdgeGroup}) so projected times match in-game behavior: bang-bang
- * speed control with {@code v²/2a} braking curves, per-tick section
- * reservations in train order, chain signals reserving whole chains
- * atomically, occupancy checked transitively across diamond crossings, turns
- * limited by the train's turn speed, and Tramways sign caps as limit regions.
+ * speed control with {@code v²/2a} braking curves, persistent first-come
+ * section claims, chain signals reserving whole chains atomically, occupancy
+ * checked transitively across diamond crossings, turns limited by the
+ * train's turn speed, and Tramways sign caps as limit regions.
  */
 public class SimEngine {
 
@@ -28,6 +24,8 @@ public class SimEngine {
     private static final double PRE_DEPARTURE_LOOKAHEAD = 4.5;
     /** Create's schedule retry cooldown ({@code ScheduleRuntime.INTERVAL}). */
     private static final int RETRY_COOLDOWN = 40;
+    /** A train held at a signal re-navigates this often (Create keeps looking). */
+    private static final long REPATH_WAIT_TICKS = 100;
 
     private static class StationHistory {
         long lastAny = Long.MIN_VALUE;
@@ -44,6 +42,7 @@ public class SimEngine {
 
     private final List<TrainState> trains = new ArrayList<>();
     private final SimResult result = new SimResult();
+    private final ConflictDetector conflicts;
 
     /** Per-tick occupancy: how many trains sit in each section, and which. */
     private final int[] sectionTrainCount;
@@ -55,8 +54,18 @@ public class SimEngine {
     private final int[] staticTrainCount;
     private final int[] staticSingleTrain;
     private boolean staticOccupancyDirty = true;
-    /** Per-tick reservation claims, re-established in train order (Create-style). */
+    /**
+     * Signal-section claims, first come first served. A claim persists as
+     * long as its owner keeps approaching (refreshes it every tick) and is
+     * released once the owner stops refreshing — entered the section,
+     * rerouted, reversed or arrived. Mirrors Create's signal groups staying
+     * reserved for the first train that committed; re-deriving claims per
+     * tick in train order would let a later train steal the block from a
+     * train that claimed it first.
+     */
     private final int[] sectionReservedBy;
+    /** Tick each claim was last refreshed on; stale claims are released. */
+    private final long[] sectionClaimTick;
     /** Unique legal predecessor per edge; -1 when none or ambiguous. */
     private final int[] uniquePredecessor;
     /**
@@ -94,6 +103,20 @@ public class SimEngine {
 
     public SimEngine(SimGraph graph, List<SimTrainSpec> specs, SimClock clock,
                      long horizonTicks, int sampleStride, long maxWallMillis) {
+        this(graph, specs, clock, horizonTicks, sampleStride, maxWallMillis, 600, 200);
+    }
+
+    /**
+     * @param waitConflictTicks    red-signal wait that becomes a SECTION
+     *                             conflict; ≤0 disables wait conflicts
+     * @param headwayConflictTicks minimum gap between consecutive trains
+     *                             through a section; CRN separation
+     *                             conditions tighten it per train pair, so
+     *                             ≤0 only disables the flat threshold
+     */
+    public SimEngine(SimGraph graph, List<SimTrainSpec> specs, SimClock clock,
+                     long horizonTicks, int sampleStride, long maxWallMillis,
+                     long waitConflictTicks, long headwayConflictTicks) {
         this.graph = graph;
         this.clock = clock;
         this.horizon = horizonTicks;
@@ -104,6 +127,8 @@ public class SimEngine {
         this.staticTrainCount = new int[graph.sectionCount()];
         this.staticSingleTrain = new int[graph.sectionCount()];
         this.sectionReservedBy = new int[graph.sectionCount()];
+        java.util.Arrays.fill(sectionReservedBy, -1);
+        this.sectionClaimTick = new long[graph.sectionCount()];
         // -2 marks "seen twice" while building; collapsed to -1 below.
         this.uniquePredecessor = new int[graph.edges.size()];
         java.util.Arrays.fill(uniquePredecessor, -1);
@@ -150,6 +175,8 @@ public class SimEngine {
 
         for (int i = 0; i < specs.size(); i++)
             trains.add(new TrainState(specs.get(i), i));
+        this.conflicts = new ConflictDetector(graph, trains, sectionReservedBy,
+                waitConflictTicks, headwayConflictTicks);
     }
 
     public SimResult run() {
@@ -170,7 +197,10 @@ public class SimEngine {
 
             long occupancyStart = System.nanoTime();
             rebuildOccupancy();
-            java.util.Arrays.fill(sectionReservedBy, -1);
+            // Release claims whose owner didn't refresh them last tick.
+            for (int s = 0; s < sectionReservedBy.length; s++)
+                if (sectionReservedBy[s] != -1 && sectionClaimTick[s] < tick - 1)
+                    sectionReservedBy[s] = -1;
             long loopStart = System.nanoTime();
             result.stats.occupancyNanos += loopStart - occupancyStart;
 
@@ -181,6 +211,10 @@ public class SimEngine {
                     anyActive = true;
             }
             result.stats.trainLoopNanos += System.nanoTime() - loopStart;
+
+            long conflictStart = System.nanoTime();
+            conflicts.tick(tick);
+            result.stats.conflictNanos += System.nanoTime() - conflictStart;
 
             if (tick % sampleStride == 0)
                 for (TrainState train : trains)
@@ -196,15 +230,25 @@ public class SimEngine {
 
         result.ticksSimulated = tick;
         result.stats.pathfindMemoSize = pathFailMemo.size();
+        long conflictStart = System.nanoTime();
+        conflicts.finish(result, tick);
+        result.stats.conflictNanos += System.nanoTime() - conflictStart;
         for (TrainState train : trains) {
             sample(train, Math.min(tick, horizon));
             train.result.endState = train.mode.name();
+            if (train.route != null && train.routeIndex < train.route.length) {
+                int remaining = Math.min(train.route.length - train.routeIndex, 200);
+                train.result.finalPlan = new int[remaining];
+                System.arraycopy(train.route, train.routeIndex,
+                        train.result.finalPlan, 0, remaining);
+            }
             result.trains.add(train.result);
         }
         return result;
     }
 
     private void initTrain(TrainState train) {
+        train.result.path.add(train.headEdge);
         initOccupancy(train);
         SimTrainSpec spec = train.spec;
         if (spec.program == null || spec.program.entries.isEmpty()) {
@@ -247,6 +291,7 @@ public class SimEngine {
         int edgeId = train.headEdge;
         double end = train.headOffset;
         train.occupied.clear();
+        train.occupiedVersion++;
         while (true) {
             double start = Math.max(0, end - remaining);
             train.occupied.addFirst(new double[] { edgeId, start, end });
@@ -296,6 +341,24 @@ public class SimEngine {
         } else if (single[section] != trainIndex) {
             count[section] = 2;
         }
+    }
+
+    /**
+     * The train responsible for this edge's section reading occupied — a
+     * physical occupant first, else the claim holder. Debug bookkeeping
+     * for wait records; -1 when unknown.
+     */
+    private int sectionHolder(int edgeId, int me) {
+        if (edgeId < 0)
+            return -1;
+        for (int linked : graph.sectionClosure(graph.edge(edgeId).sectionId)) {
+            if (sectionTrainCount[linked] >= 1 && sectionSingleTrain[linked] != me
+                    && sectionSingleTrain[linked] != -1)
+                return sectionSingleTrain[linked];
+            if (sectionReservedBy[linked] != -1 && sectionReservedBy[linked] != me)
+                return sectionReservedBy[linked];
+        }
+        return -1;
     }
 
     /** Mirrors {@code SignalEdgeGroup.isOccupiedUnless} incl. crossings. */
@@ -351,40 +414,27 @@ public class SimEngine {
 
     private void startNavigation(TrainState train, SimProgram.Entry entry, long tick) {
         long pathfindStart = System.nanoTime();
-        List<SimGraph.StationTarget> targets;
-        String targetKey;
-        if (train.resumeDestination != null
-                && graph.findStation(train.resumeDestination) != null) {
-            targets = List.of(graph.findStation(train.resumeDestination));
-            targetKey = "R" + train.resumeDestination;
-        } else {
-            targets = findStationsCached(entry);
-            targetKey = "P" + entry.pattern.pattern();
+        int reverseEdge = -1;
+        double reverseOffset = 0;
+        if (train.spec.canReverse && !train.occupied.isEmpty()) {
+            double[] tailSpan = train.occupied.peekFirst();
+            SimEdge tailEdge = graph.edge((int) tailSpan[0]);
+            if (tailEdge.oppositeId >= 0) {
+                reverseEdge = tailEdge.oppositeId;
+                reverseOffset = tailEdge.length - tailSpan[1];
+            }
         }
 
-        SimPathfinder.Path path = null;
-        if (!targets.isEmpty()) {
-            int reverseEdge = -1;
-            double reverseOffset = 0;
-            if (train.spec.canReverse && !train.occupied.isEmpty()) {
-                double[] tailSpan = train.occupied.peekFirst();
-                SimEdge tailEdge = graph.edge((int) tailSpan[0]);
-                if (tailEdge.oppositeId >= 0) {
-                    reverseEdge = tailEdge.oppositeId;
-                    reverseOffset = tailEdge.length - tailSpan[1];
-                }
-            }
-            PathFailKey memoKey = new PathFailKey(train.headEdge,
-                    Double.doubleToLongBits(train.headOffset), reverseEdge,
-                    Double.doubleToLongBits(reverseOffset), targetKey);
-            if (pathFailMemo.contains(memoKey)) {
-                result.stats.pathfindMemoHits++;
-            } else {
-                path = SimPathfinder.find(graph, train.headEdge, train.headOffset, targets,
-                        train.spec.canReverse, reverseEdge, reverseOffset, buildPenalties(train));
-                if (path == null)
-                    pathFailMemo.add(memoKey);
-            }
+        SimPathfinder.Path path;
+        if (train.resumeDestination != null
+                && graph.findStation(train.resumeDestination) != null) {
+            path = searchMemoized(train, List.of(graph.findStation(train.resumeDestination)),
+                    "R" + train.resumeDestination, reverseEdge, reverseOffset, null);
+        } else if (entry.patterns.size() == 1) {
+            path = searchMemoized(train, findStationsCached(entry.pattern),
+                    "P" + entry.pattern.pattern(), reverseEdge, reverseOffset, null);
+        } else {
+            path = prioritizedSearch(train, entry, reverseEdge, reverseOffset);
         }
         result.stats.pathfindNanos += System.nanoTime() - pathfindStart;
         result.stats.pathfindCalls++;
@@ -456,9 +506,86 @@ public class SimEngine {
         };
     }
 
-    private List<SimGraph.StationTarget> findStationsCached(SimProgram.Entry entry) {
-        return stationTargetCache.computeIfAbsent(entry.pattern.pattern(),
-                key -> graph.findStations(entry.pattern));
+    /** One memoized pathfinder invocation toward a fixed target set. */
+    private SimPathfinder.Path searchMemoized(TrainState train, List<SimGraph.StationTarget> targets,
+                                              String targetKey, int reverseEdge, double reverseOffset,
+                                              SimPathfinder.Penalties penalties) {
+        if (targets.isEmpty())
+            return null;
+        PathFailKey memoKey = new PathFailKey(train.headEdge,
+                Double.doubleToLongBits(train.headOffset), reverseEdge,
+                Double.doubleToLongBits(reverseOffset), targetKey);
+        if (pathFailMemo.contains(memoKey)) {
+            result.stats.pathfindMemoHits++;
+            return null;
+        }
+        SimPathfinder.Path path = SimPathfinder.find(graph, train.headEdge, train.headOffset,
+                targets, train.spec.canReverse, reverseEdge, reverseOffset,
+                penalties != null ? penalties : buildPenalties(train));
+        if (path == null)
+            pathFailMemo.add(memoKey);
+        return path;
+    }
+
+    /**
+     * CRN's {@code PrioritizedDestinationInstruction.start}: filters in
+     * priority order, cheapest matching station per filter, the first
+     * reachable filter wins — unless avoid-trains is set, where a busy
+     * chosen station makes later filters preferable (fewest problems,
+     * earliest wins ties). The avoid-red-signal toggle inspects the train's
+     * own surroundings, identical for every filter, so it can never change
+     * which filter wins and is not modeled.
+     */
+    private SimPathfinder.Path prioritizedSearch(TrainState train, SimProgram.Entry entry,
+                                                 int reverseEdge, double reverseOffset) {
+        SimPathfinder.Penalties penalties = buildPenalties(train);
+        SimPathfinder.Path best = null;
+        int bestProblems = Integer.MAX_VALUE;
+        for (Pattern pattern : entry.patterns) {
+            SimPathfinder.Path path = searchMemoized(train, findStationsCached(pattern),
+                    "P" + pattern.pattern(), reverseEdge, reverseOffset, penalties);
+            if (path == null)
+                continue;
+            int problems = entry.avoidTrains && stationBusy(path.target(), train) ? 1 : 0;
+            if (problems < bestProblems) {
+                bestProblems = problems;
+                best = path;
+                if (problems == 0)
+                    break;
+            }
+        }
+        return best;
+    }
+
+    /** CRN's present/imminent/nearest-train test at a station, from sim state. */
+    private boolean stationBusy(SimGraph.StationTarget target, TrainState me) {
+        SimEdge platformEdge = graph.edge(target.edgeId());
+        int opposite = platformEdge.oppositeId;
+        double mirroredOffset = platformEdge.length - target.offset();
+        for (TrainState other : trains) {
+            if (other == me)
+                continue;
+            if (target.stationId().equals(other.currentStationId))
+                return true;
+            if (other.mode == TrainState.Mode.MOVING
+                    && target.stationId().equals(other.targetStation))
+                return true;
+            for (double[] span : other.occupied) {
+                int spanEdge = (int) span[0];
+                if (spanEdge == target.edgeId()
+                        && target.offset() >= span[1] - 3 && target.offset() <= span[2] + 3)
+                    return true;
+                if (spanEdge == opposite
+                        && mirroredOffset >= span[1] - 3 && mirroredOffset <= span[2] + 3)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private List<SimGraph.StationTarget> findStationsCached(Pattern pattern) {
+        return stationTargetCache.computeIfAbsent(pattern.pattern(),
+                key -> graph.findStations(pattern));
     }
 
     /** Create's {@code Train.getNavigationPenalty}, from sim state. */
@@ -492,12 +619,14 @@ public class SimEngine {
             flipped.add(new double[] { edge.oppositeId, edge.length - span[2], edge.length - span[1] });
         }
         train.occupied.clear();
+        train.occupiedVersion++;
         for (int i = flipped.size() - 1; i >= 0; i--)
             train.occupied.addLast(flipped.get(i));
         if (!train.occupied.isEmpty()) {
             double[] headSpan = train.occupied.peekLast();
             train.headEdge = (int) headSpan[0];
             train.headOffset = headSpan[2];
+            train.result.path.add(train.headEdge);
         }
         event(SimResult.EventType.REVERSED, tick, train, 0);
     }
@@ -626,6 +755,7 @@ public class SimEngine {
         double scanDistance = clamp(brakingNoFlicker, preDeparture, train.distanceToTarget);
 
         double signalStop = scanSignals(train, scanDistance, brakingNoFlicker);
+        train.blockedEdge = signalStop >= 0 ? scanBlockedEdge : -1;
 
         // Signal wait bookkeeping (feeds the M4 conflict detectors).
         if (signalStop >= 0 && signalStop < 1 && train.speed < 1e-4) {
@@ -633,15 +763,31 @@ public class SimEngine {
                 train.signalWaiting = true;
                 train.signalWaitStart = tick;
                 event(SimResult.EventType.SIGNAL_WAIT_START, tick, train, 0);
+                train.result.waitBlocks.add(new long[] { tick, train.blockedEdge,
+                        sectionHolder(train.blockedEdge, train.index) });
             }
         } else if (train.signalWaiting && signalStop < 0) {
             train.signalWaiting = false;
             event(SimResult.EventType.SIGNAL_WAIT_END, tick, train, tick - train.signalWaitStart);
         }
 
-        double targetDistance = (signalStop >= 0
-                ? Math.min(signalStop, train.distanceToTarget)
-                : train.distanceToTarget) + 0.25;
+        // Create re-navigates a held train (Navigation keeps looking for a
+        // way around, and buildPenalties already prices in blockages and
+        // wait times) — without this, one permanently occupied platform
+        // freezes its whole corridor and the network cascades into
+        // gridlock instead of diverting like the real server does.
+        if (train.signalWaiting && tick > train.signalWaitStart
+                && (tick - train.signalWaitStart) % REPATH_WAIT_TICKS == 0)
+            repath(train, tick);
+
+        // SnR waypoints: the train rolls through without braking for the
+        // target — only signals ahead still slow it down.
+        boolean waypoint = isWaypointEntry(train);
+        double targetDistance = waypoint
+                ? (signalStop >= 0 ? signalStop + 0.25 : Double.MAX_VALUE)
+                : (signalStop >= 0
+                        ? Math.min(signalStop, train.distanceToTarget)
+                        : train.distanceToTarget) + 0.25;
 
         // Don't leave the platform until the exit signal clears.
         if (targetDistance > ARRIVAL_EPS && train.holdingAtStation) {
@@ -691,8 +837,18 @@ public class SimEngine {
         if (signalStop >= 0 && signalStop - step <= ARRIVAL_EPS)
             train.speed = 0;
 
-        if (train.distanceToTarget <= ARRIVAL_EPS && signalStop < 0)
-            arrive(train, tick);
+        if (train.distanceToTarget <= ARRIVAL_EPS && signalStop < 0) {
+            if (waypoint)
+                passWaypoint(train, tick);
+            else
+                arrive(train, tick);
+        }
+    }
+
+    private boolean isWaypointEntry(TrainState train) {
+        SimProgram program = train.spec.program;
+        return program != null && train.currentEntry < program.entries.size()
+                && program.entries.get(train.currentEntry).waypoint;
     }
 
     /**
@@ -704,23 +860,46 @@ public class SimEngine {
      *
      * @return distance to the signal to stop at, or -1
      */
+    /** The governed edge whose occupied section caused the last scan's stop. */
+    private int scanBlockedEdge;
+
     private double scanSignals(TrainState train, double scanDistance, double brakingDistance) {
+        scanBlockedEdge = -1;
         if (train.route == null)
             return -1;
         double distance = graph.edge(train.headEdge).length - train.headOffset;
         double chainStart = -1;
         List<Integer> chainSections = new ArrayList<>();
         double stop = -1;
+        // Granted reservations sit within a chain's span of the train; a
+        // bounded look past the braking scan is enough to keep them alive.
+        int beyondScanBudget = 32;
 
         for (int i = train.routeIndex; i + 1 < train.route.length; i++) {
             if (distance >= train.distanceToTarget - 1e-6)
                 break;
-            if (chainStart == -1 && distance > scanDistance)
+            boolean beyondScan = chainStart == -1 && distance > scanDistance;
+            if (beyondScan && --beyondScanBudget < 0)
                 break;
 
             SimEdge next = graph.edge(train.route[i + 1]);
             if (next.entrySignal != SimEdge.Signal.NONE) {
                 int section = next.sectionId;
+                if (beyondScan) {
+                    // Committed reservations stay alive until traversed —
+                    // Create's chain groups stay reserved for the granted
+                    // train the whole way through, else a train crossing a
+                    // long corridor loses its far platform to an opposing
+                    // arrival and the two meet head-on. Only a contiguous
+                    // owned run is refreshed; the first foreign signal ends
+                    // the walk (nothing of ours can lie beyond it).
+                    if (sectionReservedBy[section] == train.index)
+                        claim(section, train);
+                    else
+                        break;
+                    distance += next.length;
+                    continue;
+                }
                 boolean occupied = occupiedByOther(section, train.index);
                 boolean chain = next.entrySignal == SimEdge.Signal.CHAIN;
 
@@ -732,19 +911,24 @@ public class SimEngine {
                     }
                     if (occupied) {
                         stop = distance;
+                        if (scanBlockedEdge == -1)
+                            scanBlockedEdge = next.id;
                         if (!chain)
                             return stop;
                     }
                     if (!occupied && !chain && distance < brakingDistance)
-                        sectionReservedBy[section] = train.index;
+                        claim(section, train);
                 } else {
                     chainSections.add(section);
-                    if (occupied)
+                    if (occupied) {
                         stop = chainStart;
+                        if (scanBlockedEdge == -1)
+                            scanBlockedEdge = next.id;
+                    }
                     if (!chain) {
                         if (stop == -1) {
                             for (int chained : chainSections)
-                                sectionReservedBy[chained] = train.index;
+                                claim(chained, train);
                             chainStart = -1;
                             chainSections.clear();
                         } else {
@@ -758,8 +942,36 @@ public class SimEngine {
 
         if (chainStart != -1 && stop == -1)
             for (int chained : chainSections)
-                sectionReservedBy[chained] = train.index;
+                claim(chained, train);
         return stop;
+    }
+
+    /** Takes or refreshes a section claim; first come, first served. */
+    private void claim(int section, TrainState train) {
+        sectionReservedBy[section] = train.index;
+        sectionClaimTick[section] = currentTick;
+    }
+
+    /**
+     * Re-runs navigation for the current destination while the train is
+     * held at a red signal. The wait bookkeeping survives the call: if the
+     * fresh route clears the way, next tick's scan closes the wait window
+     * naturally; if nothing better exists the search returns the same
+     * route (or fails, keeping the old one) and the wait keeps aging
+     * toward a conflict report.
+     */
+    private void repath(TrainState train, long tick) {
+        SimProgram program = train.spec.program;
+        if (program == null || train.currentEntry >= program.entries.size())
+            return;
+        SimProgram.Entry entry = program.entries.get(train.currentEntry);
+        if (entry.kind != SimProgram.InstructionKind.DESTINATION)
+            return;
+        boolean waiting = train.signalWaiting;
+        long waitStart = train.signalWaitStart;
+        startNavigation(train, entry, tick);
+        train.signalWaiting = waiting;
+        train.signalWaitStart = waitStart;
     }
 
     /** Distance to the next turn region ahead (0 if inside one), or -1. */
@@ -814,11 +1026,13 @@ public class SimEngine {
                 train.headOffset += moved;
                 remaining -= moved;
                 double[] headSpan = train.occupied.peekLast();
-                if (headSpan != null && (int) headSpan[0] == train.headEdge)
+                if (headSpan != null && (int) headSpan[0] == train.headEdge) {
                     headSpan[2] = train.headOffset;
-                else
+                } else {
                     train.occupied.addLast(new double[] { train.headEdge,
                             train.headOffset - moved, train.headOffset });
+                    train.occupiedVersion++;
+                }
             }
             if (remaining <= 1e-9)
                 break;
@@ -827,7 +1041,9 @@ public class SimEngine {
             train.routeIndex++;
             train.headEdge = train.route[train.routeIndex];
             train.headOffset = 0;
+            train.result.path.add(train.headEdge);
             train.occupied.addLast(new double[] { train.headEdge, 0, 0 });
+            train.occupiedVersion++;
         }
         train.distanceToTarget -= step - remaining;
         trimTail(train);
@@ -840,12 +1056,39 @@ public class SimEngine {
             double spanLength = tail[2] - tail[1];
             if (spanLength <= excess + 1e-9) {
                 train.occupied.pollFirst();
+                train.occupiedVersion++;
                 excess -= spanLength;
             } else {
                 tail[1] += excess;
                 excess = 0;
             }
         }
+    }
+
+    /**
+     * Passes a Steam 'n' Rails waypoint: a zero-dwell visit is recorded and
+     * the next entry dispatches the same tick, keeping the current speed —
+     * the momentary standstill this tick is the 1-tick quantization of
+     * SnR's seamless roll-through.
+     */
+    private void passWaypoint(TrainState train, long tick) {
+        train.route = null;
+        train.distanceToTarget = 0;
+        train.blockedEdge = -1;
+        if (train.signalWaiting) {
+            train.signalWaiting = false;
+            event(SimResult.EventType.SIGNAL_WAIT_END, tick, train, tick - train.signalWaitStart);
+        }
+        train.result.visits.add(new SimResult.StationVisit(train.currentEntry, train.targetStation,
+                train.targetStationName, tick, tick));
+        event(SimResult.EventType.ARRIVAL, tick, train, train.currentEntry);
+        event(SimResult.EventType.DEPARTURE, tick, train, train.currentEntry);
+        sample(train, tick);
+        train.currentEntry++;
+        train.cooldown = 0;
+        train.holdingAtStation = false;
+        train.mode = TrainState.Mode.PRE_TRANSIT;
+        tickPreTransit(train, tick);
     }
 
     private void arrive(TrainState train, long tick) {
@@ -857,6 +1100,7 @@ public class SimEngine {
         train.currentStationName = train.targetStationName;
         train.arrivalTick = tick;
         train.holdingAtStation = true;
+        train.blockedEdge = -1;
         if (train.signalWaiting) {
             train.signalWaiting = false;
             event(SimResult.EventType.SIGNAL_WAIT_END, tick, train, tick - train.signalWaitStart);

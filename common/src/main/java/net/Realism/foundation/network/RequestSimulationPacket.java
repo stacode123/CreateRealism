@@ -23,7 +23,9 @@ public record RequestSimulationPacket(SimulationService.Settings settings) imple
                 Mth.clamp(buf.readVarInt(), 1, 336),
                 buf.readBoolean(),
                 Mth.clamp(buf.readVarInt(), 0, 23),
-                Mth.clamp(buf.readVarInt(), 0, 59)));
+                Mth.clamp(buf.readVarInt(), 0, 59),
+                Mth.clamp(buf.readVarInt(), -1, 600),
+                buf.readBoolean()));
     }
 
     @Override
@@ -36,6 +38,8 @@ public record RequestSimulationPacket(SimulationService.Settings settings) imple
         buf.writeBoolean(settings.startNow());
         buf.writeVarInt(settings.startHour());
         buf.writeVarInt(settings.startMinute());
+        buf.writeVarInt(settings.headwaySeconds());
+        buf.writeBoolean(settings.thorough());
     }
 
     @Override

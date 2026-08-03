@@ -15,6 +15,10 @@ dependencies {
     annotationProcessor(implementation("io.github.llamalad7:mixinextras-common:${mixin_extras_version}"))
     modCompileOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common")
     modRuntimeOnly("purplecreate.tramways:tramways-common:$tramways_version-mc1.20.1-common")
+    // Create Railways Navigator station tags (compat/CrnCompat) — compile-only,
+    // guarded behind isModLoaded at runtime, same pattern as Tramways.
+    // Version id = 1.20.1-beta-0.9.1-C6 fabric (matches the create-fabric compile env).
+    modCompileOnly("maven.modrinth:create-railways-navigator:Byo7nLl9") { transitive = false }
     // DragonLib's own maven (maven.lounode.top) is unreachable; Modrinth maven, version id = 1.20.1-beta-3.0.28 fabric
     modImplementation("maven.modrinth:dragonlib:uz4tlLzk")
 

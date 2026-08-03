@@ -36,6 +36,11 @@ public class TrainState {
     public double headOffset;
     /** Spans {@code {edgeId, startOffset, endOffset}}, ordered tail → head. */
     public final ArrayDeque<double[]> occupied = new ArrayDeque<>();
+    /**
+     * Bumped whenever {@code occupied} gains or loses a span (edge set may
+     * have changed). Read only by the conflict detectors' fast path.
+     */
+    public int occupiedVersion;
 
     public int[] route;
     public int routeIndex;
@@ -66,6 +71,11 @@ public class TrainState {
 
     public boolean signalWaiting;
     public long signalWaitStart;
+    /**
+     * The governed edge whose red entry signal the last scan stopped at, or
+     * -1. Observation for the conflict detectors — never a decision input.
+     */
+    public int blockedEdge = -1;
 
     public final SimResult.TrainResult result;
 

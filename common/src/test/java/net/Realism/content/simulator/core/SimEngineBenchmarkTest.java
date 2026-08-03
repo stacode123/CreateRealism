@@ -60,6 +60,8 @@ class SimEngineBenchmarkTest {
                 stats.pathfindNanos / 1e9, stats.pathfindCalls, stats.pathfindFails,
                 stats.pathfindMemoHits);
         System.out.printf("[sim-bench] memo size %d%n", stats.pathfindMemoSize);
+        System.out.printf("[sim-bench] conflicts %.2fs for %d records%n",
+                stats.conflictNanos / 1e9, result.conflicts.size());
         System.out.printf("[sim-bench] digest %016x | visits %d | events %d%n",
                 digest(result), visits, result.events.size());
         org.junit.jupiter.api.Assertions.assertTrue(visits > 100,

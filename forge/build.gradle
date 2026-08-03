@@ -52,6 +52,13 @@ dependencies {
     modCompileOnly("maven.modrinth:create-railways-navigator:r5q4MIYy") { transitive = false }
     modLocalRuntime("maven.modrinth:create-railways-navigator:r5q4MIYy") { transitive = false }
 
+    // Steam 'n' Rails cannot run in this dev environment: as a raw jar in
+    // run/mods its SRG references crash DFU init, and through loom
+    // (modLocalRuntime) the Architectury refmap remapper garbles its
+    // TrackBlockOutline accessor ("LONG_CROSS" -> "ONG_CROSS"), hard-failing
+    // Create's class load. The simulator's SnR schedule support is covered
+    // by JUnit (WaypointTest); verify the GUI side on a production pack.
+
     modImplementation "dev.architectury:architectury-forge:$rootProject.architectury_api_version"
     // DragonLib's own maven (maven.lounode.top) is unreachable; Modrinth maven, version id = 1.20.1-beta-3.0.28 forge
     modImplementation("maven.modrinth:dragonlib:RWduTzyi")

@@ -17,3 +17,5 @@ classes/
 .vscode
 .settings
 *.launch
+# local deploy script (holds FTP credentials)
+deploy.sh

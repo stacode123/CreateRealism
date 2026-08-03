@@ -62,6 +62,8 @@ dependencies {
     modCompileOnly("maven.modrinth:create-railways-navigator:Byo7nLl9") { transitive = false }
     modLocalRuntime("maven.modrinth:create-railways-navigator:Byo7nLl9") { transitive = false }
 
+    // Steam 'n' Rails cannot run in dev — see the forge module's note.
+
     switch (fabric_recipe_viewer.toLowerCase(Locale.ROOT)) {
         case "jei": modLocalRuntime("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}"); break
         case "rei": modLocalRuntime("me.shedaniel:RoughlyEnoughItems-fabric:${rei_version}"); break

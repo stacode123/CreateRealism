@@ -15,6 +15,11 @@ public class SimulationResultOpener {
 
     public static void open(SimulationPayload payload) {
         Minecraft mc = Minecraft.getInstance();
+        if (!payload.refused()) {
+            // Remembered for the card-time overlay and the map's badges.
+            SimulationClientData.lastResults = payload;
+            SimulationClientData.lastScheduleHash = SimulationClientData.pendingScheduleHash;
+        }
         if (mc.screen instanceof AdvancedScheduleScreen screen) {
             screen.simulationArrived(payload);
             return;

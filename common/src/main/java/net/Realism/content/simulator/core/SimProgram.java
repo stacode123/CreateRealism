@@ -27,6 +27,22 @@ public class SimProgram {
         public final Pattern pattern;
         /** Raw filter text (for separation history + display), else "". */
         public final String filterText;
+        /**
+         * All destination globs in priority order (CRN prioritized
+         * destinations; a plain destination has exactly one). The engine
+         * takes the first reachable filter — earlier ones only get skipped
+         * for occupancy when {@link #avoidTrains} is set, mirroring
+         * {@code PrioritizedDestinationInstruction.start}.
+         */
+        public final List<Pattern> patterns;
+        /** CRN "avoid trains": prefer a later filter over a busy station. */
+        public final boolean avoidTrains;
+        /**
+         * Steam 'n' Rails waypoint: route through the station without
+         * stopping — no braking toward it, no dwell, schedule advances the
+         * moment it is passed.
+         */
+        public final boolean waypoint;
         /** Throttle fraction for THROTTLE, else 1. */
         public final double throttle;
         /**
@@ -39,23 +55,39 @@ public class SimProgram {
         public String categoryToken;
         public final List<List<SimCondition>> columns = new ArrayList<>();
 
-        private Entry(InstructionKind kind, Pattern pattern, String filterText, double throttle) {
+        private Entry(InstructionKind kind, List<Pattern> patterns, String filterText,
+                      boolean avoidTrains, boolean waypoint, double throttle) {
             this.kind = kind;
-            this.pattern = pattern;
+            this.patterns = patterns;
+            this.pattern = patterns == null || patterns.isEmpty() ? null : patterns.get(0);
             this.filterText = filterText;
+            this.avoidTrains = avoidTrains;
+            this.waypoint = waypoint;
             this.throttle = throttle;
         }
 
         public static Entry destination(String filter) {
-            return new Entry(InstructionKind.DESTINATION, SimGlob.compile(filter), filter, 1);
+            return new Entry(InstructionKind.DESTINATION,
+                    List.of(SimGlob.compile(filter)), filter, false, false, 1);
+        }
+
+        public static Entry destinationPrioritized(List<String> filters, boolean avoidTrains) {
+            return new Entry(InstructionKind.DESTINATION,
+                    filters.stream().map(SimGlob::compile).toList(),
+                    filters.get(0), avoidTrains, false, 1);
+        }
+
+        public static Entry waypointDestination(String filter) {
+            return new Entry(InstructionKind.DESTINATION,
+                    List.of(SimGlob.compile(filter)), filter, false, true, 1);
         }
 
         public static Entry throttle(double fraction) {
-            return new Entry(InstructionKind.THROTTLE, null, "", fraction);
+            return new Entry(InstructionKind.THROTTLE, null, "", false, false, fraction);
         }
 
         public static Entry noOp() {
-            return new Entry(InstructionKind.NO_OP, null, "", 1);
+            return new Entry(InstructionKind.NO_OP, null, "", false, false, 1);
         }
     }
 

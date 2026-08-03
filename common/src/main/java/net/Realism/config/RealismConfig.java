@@ -15,6 +15,10 @@ public class RealismConfig {
         public final ForgeConfigSpec.IntValue SimCooldownSeconds;
         public final ForgeConfigSpec.IntValue SimMaxConcurrent;
         public final ForgeConfigSpec.IntValue SimMaxWallSeconds;
+        public final ForgeConfigSpec.IntValue SimHeadwaySeconds;
+        public final ForgeConfigSpec.IntValue SimWaitConflictSeconds;
+        public final ForgeConfigSpec.BooleanValue SimDebugExport;
+        public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> SimDiagramHiddenCategories;
 
         Common(ForgeConfigSpec.Builder builder) {
             builder.push("general");
@@ -45,6 +49,15 @@ public class RealismConfig {
                     .defineInRange("Sim Max Concurrent", 2, 1, 8);
             SimMaxWallSeconds = builder.comment("Real-time seconds a single simulation may compute before its results are cut off")
                     .defineInRange("Sim Max Wall Seconds", 10, 1, 120);
+            SimHeadwaySeconds = builder.comment("Default minimum gap in seconds between consecutive trains through a track section before a headway conflict is reported; players can override per run. 0 disables the flat threshold (CRN separation conditions still apply)")
+                    .defineInRange("Sim Headway Seconds", 10, 0, 600);
+            SimWaitConflictSeconds = builder.comment("Seconds a simulated train may wait at a red signal before a section conflict is reported; 0 disables wait conflicts")
+                    .defineInRange("Sim Wait Conflict Seconds", 30, 0, 600);
+            SimDebugExport = builder.comment("Write a self-contained HTML playback viewer (realism-sim-debug.html in the server/save directory) after every simulation — a debugging tool")
+                    .define("Sim Debug Export", false);
+            SimDiagramHiddenCategories = builder.comment("Trains whose CRN train category name contains any of these words (case-insensitive) are hidden from the time-distance diagram, e.g. [\"bus\"]")
+                    .defineListAllowEmpty(java.util.List.of("Sim Diagram Hidden Categories"),
+                            java.util.List::of, element -> element instanceof String);
             builder.pop();
             builder.pop();
         }

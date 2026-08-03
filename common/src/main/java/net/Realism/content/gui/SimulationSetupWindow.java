@@ -1,12 +1,10 @@
 package net.Realism.content.gui;
 
+import com.simibubi.create.content.trains.schedule.Schedule;
 import de.mrjulsen.mcdragonlib.client.gui.events.DLGuiStandardEvents;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLWindow;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLWindowManager;
-import de.mrjulsen.mcdragonlib.client.gui.widgets.components.DLButton;
-import de.mrjulsen.mcdragonlib.client.gui.widgets.components.DLCycleButton;
-import de.mrjulsen.mcdragonlib.client.gui.widgets.components.DLNumberPicker;
-import de.mrjulsen.mcdragonlib.client.gui.widgets.components.DLRichTextLabel;
+import de.mrjulsen.mcdragonlib.client.gui.widgets.components.*;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.util.INumberFormatAdapter;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.util.ITextFormatter;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
@@ -14,6 +12,7 @@ import net.Realism.RNetworking;
 import net.Realism.content.simulator.SimulationService;
 import net.Realism.content.trains.schedule.AdvancedScheduleScreen;
 import net.Realism.foundation.network.RequestSimulationPacket;
+import net.Realism.mixin.mixinaccesors.ScheduleScreenAccessor;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -38,13 +37,19 @@ public class SimulationSetupWindow extends DLWindow {
     private static int startHour = 8;
     private static int startMinute = 0;
     private static int horizonHours = 48;
+    /** Headway conflict threshold; server default while {@code true}. */
+    private static boolean headwayDefault = true;
+    private static int headwaySeconds = 10;
+    /** Baseline-diff mode: report only conflicts this schedule causes. */
+    private static boolean thoroughMode = false;
 
     public SimulationSetupWindow(DLWindowManager manager, AdvancedScheduleScreen host) {
         super(manager);
-        setSize(300, 212);
+        // 248 tall: the proven usable-height floor at GUI scale 4.
+        setSize(300, 248);
         var mcWindow = net.minecraft.client.Minecraft.getInstance().getWindow();
         setPosition(Math.max(0, (mcWindow.getGuiScaledWidth() - 300) / 2),
-                Math.max(0, (mcWindow.getGuiScaledHeight() - 212) / 2));
+                Math.max(0, (mcWindow.getGuiScaledHeight() - 248) / 2));
 
         DLRichTextLabel title = addComponent(new DLRichTextLabel(95, 8, 200, 20));
         title.text.get().set(Component.translatable("realism.gui.sim.title").getString());
@@ -121,6 +126,29 @@ public class SimulationSetupWindow extends DLWindow {
         horizonPicker.value.set((double) horizonHours);
         row++;
 
+        label(row, "realism.gui.sim.headway");
+        DLCycleButton<String> headwayButton = cycle(row, 84);
+        headwayButton.items.add(Component.translatable("realism.gui.sim.headway.default").getString());
+        headwayButton.items.add(Component.translatable("realism.gui.sim.headway.custom").getString());
+        headwayButton.selectedIndex.set(headwayDefault ? 0 : 1);
+
+        DLNumberPicker headwayPicker = picker(row, 180, 60);
+        headwayPicker.min.set(0.0);
+        headwayPicker.max.set(600.0);
+        headwayPicker.format.set(new INumberFormatAdapter.UnitNumberFormat(0, "s"));
+        headwayPicker.value.set((double) headwaySeconds);
+        headwayPicker.visible.set(!headwayDefault);
+        headwayButton.addEventListener(DLCycleButton.SelectedItemChanged.class, (src, event) -> {
+            headwayPicker.visible.set(((DLCycleButton.SelectedItemChanged) event).index() == 1);
+            return false;
+        });
+        row++;
+
+        DLCheckBox thoroughBox = addComponent(new DLCheckBox(LABEL_X, rowY(row), 270, 16));
+        thoroughBox.text.set(Component.translatable("realism.gui.sim.thorough"));
+        thoroughBox.checked.set(thoroughMode);
+        row++;
+
         DLButton runButton = addComponent(new DLButton(110, rowY(row) + 6, 80, 20));
         runButton.text.set(Component.translatable("realism.gui.sim.run"));
         runButton.addEventListener(DLGuiStandardEvents.ClickEvent.class, (event, source) -> {
@@ -132,10 +160,20 @@ public class SimulationSetupWindow extends DLWindow {
             startHour = hourPicker.value.get().intValue();
             startMinute = minutePicker.value.get().intValue();
             horizonHours = horizonPicker.value.get().intValue();
+            headwayDefault = ((int) headwayButton.selectedIndex.get()) == 0;
+            headwaySeconds = headwayPicker.value.get().intValue();
+            thoroughMode = thoroughBox.checked.get();
+
+            // Pin the coming results to the schedule content they were
+            // computed from — edits after the run grey the card times out.
+            Schedule schedule = ((ScheduleScreenAccessor) host).realism$getSchedule();
+            if (schedule != null)
+                SimulationClientData.pendingScheduleHash = SimulationClientData.hash(schedule);
 
             RNetworking.sendToServer(new RequestSimulationPacket(new SimulationService.Settings(
                     carriages, locomotives, accelerationMode, customAcceleration,
-                    horizonHours, startNow, startHour, startMinute)));
+                    horizonHours, startNow, startHour, startMinute,
+                    headwayDefault ? -1 : headwaySeconds, thoroughMode)));
             host.simulationRequested();
             closeWindow();
             return false;

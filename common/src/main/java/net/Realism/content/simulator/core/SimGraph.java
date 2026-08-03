@@ -63,11 +63,17 @@ public class SimGraph {
 
         for (SimEdge edge : edges) {
             List<Integer> candidates = outgoingByNode.get(edge.to);
+            boolean boundary = nodes.get(edge.to).signalBoundary();
             List<Integer> legal = new ArrayList<>(candidates.size());
             for (int candidateId : candidates) {
                 if (candidateId == edge.oppositeId)
                     continue;
                 SimEdge next = edges.get(candidateId);
+                // A signal boundary can only be crossed toward a signal head
+                // (Create's SignalBoundary.canNavigateVia) — a single-sided
+                // signal makes the track one-way.
+                if (boundary && next.entrySignal == SimEdge.Signal.NONE)
+                    continue;
                 if (edge.interDimensional || next.interDimensional
                         || edge.exitTangent.dot(next.entryTangent) > TURN_DOT_THRESHOLD)
                     legal.add(candidateId);

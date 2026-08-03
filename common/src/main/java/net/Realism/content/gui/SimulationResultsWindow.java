@@ -9,8 +9,13 @@ import de.mrjulsen.mcdragonlib.client.util.DLGuiGraphics;
 import de.mrjulsen.mcdragonlib.client.util.GuiUtils;
 import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.Rectangle;
+import net.Realism.RNetworking;
 import net.Realism.content.simulator.SimulationPayload;
+import net.Realism.content.simulator.core.SimConflict;
+import net.Realism.content.simulator.core.SimResult;
+import net.Realism.foundation.network.RequestGraphViewPacket;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -24,7 +29,9 @@ import java.util.Set;
  * paged list on the right — notes, then every other train by name. A +/-
  * button on a train row expands it in place to its details (stops, end
  * state, exclusion reason). Clamped lines show their full text as a hover
- * tooltip. The conflict panel and time-distance diagram come with M4/M5.
+ * tooltip. Conflicts lead the right panel (M4); a Map button per conflict
+ * jumps to its spot on the rail map and the Diagram button opens the
+ * time-distance diagram (M5).
  */
 public class SimulationResultsWindow extends DLWindow {
 
@@ -74,25 +81,41 @@ public class SimulationResultsWindow extends DLWindow {
     private DLRichTextLabel pageLabel;
     private int page;
 
-    // Right panel: one scrollable list with expandable train rows.
-    private enum RowKind { HEADER, PLAIN, TRAIN, DETAIL }
+    // Right panel: one scrollable list with expandable train/conflict rows.
+    private enum RowKind { HEADER, PLAIN, TRAIN, CONFLICT, ROOT, DETAIL }
 
-    private record Row(String text, RowKind kind, int trainIndex) {}
+    /** {@code index} points into rightTrains/rightConflicts/rightRoots by kind. */
+    private record Row(String text, RowKind kind, int index) {}
 
     private record RightTrain(String name, List<String> detail, boolean excludedGroup) {}
 
+    private record RightConflict(String title, List<String> detail, boolean yours) {}
+
+    private record RightRoot(String title, List<String> detail) {}
+
     private final List<String> rightNotes = new ArrayList<>();
     private final List<RightTrain> rightTrains = new ArrayList<>();
+    private final List<RightConflict> rightConflicts = new ArrayList<>();
+    private final List<RightRoot> rightRoots = new ArrayList<>();
     private final Set<Integer> expandedTrains = new HashSet<>();
+    private final Set<Integer> expandedConflicts = new HashSet<>();
+    private final Set<Integer> expandedRoots = new HashSet<>();
+    private int conflictsDropped;
+    private boolean thoroughDiff;
     private final List<Row> rightRowList = new ArrayList<>();
     private final DLRichTextLabel[] rightLabels;
     private final String[] rightTooltips;
     private final DLButton[] rightToggleButtons;
+    /** Per row: jumps to the conflict's spot on the rail map (M5). */
+    private final DLButton[] rightMapButtons;
     private DLRichTextLabel rightPageLabel;
     private int rightPage;
 
+    private final SimulationPayload payload;
+
     public SimulationResultsWindow(DLWindowManager manager, SimulationPayload payload) {
         super(manager);
+        this.payload = payload;
         var mcWindow = Minecraft.getInstance().getWindow();
         int screenWidth = mcWindow.getGuiScaledWidth();
         int screenHeight = mcWindow.getGuiScaledHeight();
@@ -114,6 +137,7 @@ public class SimulationResultsWindow extends DLWindow {
         rightLabels = new DLRichTextLabel[rightRows];
         rightTooltips = new String[rightRows];
         rightToggleButtons = new DLButton[rightRows];
+        rightMapButtons = new DLButton[rightRows];
 
         DLRichTextLabel title = addComponent(new DLRichTextLabel(windowWidth / 2 - 100, 8, 200, 20));
         title.text.get().set(Component.translatable("realism.gui.simres.title").getString());
@@ -238,9 +262,59 @@ public class SimulationResultsWindow extends DLWindow {
     // ------------------------------------------------------------------
 
     private void buildRightModel(SimulationPayload payload, SimulationPayload.TrainLine phantom) {
+        thoroughDiff = payload.thorough;
+        String yourTrain = Component.translatable("realism.gui.simres.your_train").getString();
+        for (SimulationPayload.RootCauseLine cause : payload.rootCauses) {
+            String kind = SimResult.RootCauseKind.values()[cause.kind()].name();
+            String rootName = "phantom".equals(cause.rootName()) ? yourTrain : cause.rootName();
+            String title = rootName + " - " + Component.translatable(
+                    "realism.gui.simres.root." + kind, cause.detail()).getString();
+            List<String> names = new ArrayList<>();
+            for (String name : cause.strandedNames())
+                names.add("phantom".equals(name) ? yourTrain : name);
+            if (cause.strandedCount() > names.size())
+                names.add(Component.translatable("realism.gui.simres.root.more",
+                        cause.strandedCount() - names.size()).getString());
+            List<String> detail = new ArrayList<>();
+            detail.add(Component.translatable("realism.gui.simres.root.stuck",
+                    cause.strandedCount(), String.join(", ", names)).getString());
+            detail.add(Component.translatable("realism.gui.simres.root.since",
+                    formatTime(payload, cause.sinceTick())).getString());
+            detail.add(Component.translatable("realism.gui.simres.conflict.pos",
+                    cause.x(), cause.y(), cause.z()).getString());
+            rightRoots.add(new RightRoot(title, detail));
+        }
+        for (SimulationPayload.ConflictLine conflict : payload.conflicts) {
+            String type = Component.translatable("realism.gui.simres.conflict."
+                    + SimConflict.Type.values()[conflict.type()].name()).getString();
+            String place = conflict.resourceName().isEmpty()
+                    ? "(" + conflict.x() + ", " + conflict.y() + ", " + conflict.z() + ")"
+                    : conflict.resourceName();
+            String title = type + " - " + place
+                    + (conflict.count() > 1 ? " x" + conflict.count() : "");
+            boolean yours = conflict.trainNames().contains("phantom");
+            List<String> names = conflict.trainNames().stream()
+                    .map(name -> "phantom".equals(name) ? yourTrain : name).toList();
+            List<String> detail = new ArrayList<>();
+            detail.add(Component.translatable("realism.gui.simres.conflict.window",
+                    formatTime(payload, conflict.startTick()),
+                    formatTime(payload, conflict.endTick())).getString());
+            detail.add(Component.translatable("realism.gui.simres.conflict.trains",
+                    String.join(", ", names)).getString());
+            if (!conflict.resourceName().isEmpty())
+                detail.add(Component.translatable("realism.gui.simres.conflict.pos",
+                        conflict.x(), conflict.y(), conflict.z()).getString());
+            if (conflict.nonDeterministic())
+                detail.add(Component.translatable("realism.gui.simres.conflict.nondet").getString());
+            rightConflicts.add(new RightConflict(title, detail, yours));
+        }
+        conflictsDropped = payload.conflictsDropped;
+
+        if (payload.thorough)
+            rightNotes.add(Component.translatable("realism.gui.simres.thorough_note").getString());
         if (phantom != null)
             for (String notice : phantom.notices())
-                rightNotes.add(Component.translatable(notice).getString());
+                rightNotes.add(noticeText(notice));
         if (!payload.perfSummary.isEmpty())
             rightNotes.add(Component.translatable("realism.gui.simres.perf",
                     payload.perfSummary).getString());
@@ -255,7 +329,7 @@ public class SimulationResultsWindow extends DLWindow {
                     Component.translatable("realism.gui.simres.state." + train.endState())
                             .getString()).getString());
             for (String notice : train.notices())
-                detail.add(Component.translatable(notice).getString());
+                detail.add(noticeText(notice));
             rightTrains.add(new RightTrain(train.name(), detail, false));
         }
         for (SimulationPayload.ExcludedLine line : payload.excluded)
@@ -265,9 +339,33 @@ public class SimulationResultsWindow extends DLWindow {
         flattenRight();
     }
 
-    /** Rebuilds the flat row list from notes, trains, and expansion state. */
+    /** Rebuilds the flat row list from conflicts, notes, trains, expansion state. */
     private void flattenRight() {
         rightRowList.clear();
+        if (!rightRoots.isEmpty()) {
+            rightRowList.add(new Row(Component.translatable(
+                    "realism.gui.simres.rootcauses").getString(), RowKind.HEADER, -1));
+            for (int i = 0; i < rightRoots.size(); i++) {
+                RightRoot root = rightRoots.get(i);
+                rightRowList.add(new Row("     " + root.title(), RowKind.ROOT, i));
+                if (expandedRoots.contains(i))
+                    for (String detail : root.detail())
+                        for (String part : wrap(detail, rightWidth - 12))
+                            rightRowList.add(new Row("    " + part, RowKind.DETAIL, i));
+            }
+        }
+        if (rightConflicts.isEmpty()) {
+            rightRowList.add(new Row(Component.translatable(thoroughDiff
+                    ? "realism.gui.simres.no_conflicts.thorough"
+                    : "realism.gui.simres.no_conflicts").getString(), RowKind.PLAIN, -1));
+        } else {
+            addConflictGroup(true, "realism.gui.simres.conflicts.yours");
+            addConflictGroup(false, "realism.gui.simres.conflicts.network");
+            if (conflictsDropped > 0)
+                rightRowList.add(new Row(" " + Component.translatable(
+                        "realism.gui.simres.more_conflicts", conflictsDropped).getString(),
+                        RowKind.PLAIN, -1));
+        }
         if (!rightNotes.isEmpty()) {
             rightRowList.add(new Row(Component.translatable("realism.gui.simres.notes").getString(),
                     RowKind.HEADER, -1));
@@ -277,6 +375,26 @@ public class SimulationResultsWindow extends DLWindow {
         }
         addTrainGroup(false, "realism.gui.simres.others");
         addTrainGroup(true, "realism.gui.simres.excluded");
+    }
+
+    /** Phantom-involving conflicts first, then the rest of the network. */
+    private void addConflictGroup(boolean yours, String headerKey) {
+        boolean any = false;
+        for (int i = 0; i < rightConflicts.size(); i++) {
+            RightConflict conflict = rightConflicts.get(i);
+            if (conflict.yours() != yours)
+                continue;
+            if (!any) {
+                rightRowList.add(new Row(Component.translatable(headerKey).getString(),
+                        RowKind.HEADER, -1));
+                any = true;
+            }
+            rightRowList.add(new Row("     " + conflict.title(), RowKind.CONFLICT, i));
+            if (expandedConflicts.contains(i))
+                for (String detail : conflict.detail())
+                    for (String part : wrap(detail, rightWidth - 12))
+                        rightRowList.add(new Row("    " + part, RowKind.DETAIL, i));
+        }
     }
 
     private void addTrainGroup(boolean excludedGroup, String headerKey) {
@@ -308,16 +426,44 @@ public class SimulationResultsWindow extends DLWindow {
                     RIGHT_TOP + i * RIGHT_ROW_HEIGHT - 1, 14, 13));
             toggle.addEventListener(DLGuiStandardEvents.ClickEvent.class, (event, source) -> {
                 int index = rightPage * rightRows + row;
-                if (index < rightRowList.size() && rightRowList.get(index).kind() == RowKind.TRAIN) {
-                    int train = rightRowList.get(index).trainIndex();
-                    if (!expandedTrains.remove(train))
-                        expandedTrains.add(train);
+                if (index >= rightRowList.size())
+                    return false;
+                Row rowEntry = rightRowList.get(index);
+                Set<Integer> expanded = switch (rowEntry.kind()) {
+                    case TRAIN -> expandedTrains;
+                    case CONFLICT -> expandedConflicts;
+                    case ROOT -> expandedRoots;
+                    default -> null;
+                };
+                if (expanded != null) {
+                    if (!expanded.remove(rowEntry.index()))
+                        expanded.add(rowEntry.index());
                     flattenRight();
                     refreshRight();
                 }
                 return false;
             });
             rightToggleButtons[i] = toggle;
+            DLButton mapButton = addComponent(new DLButton(rightX + rightWidth - 30,
+                    RIGHT_TOP + i * RIGHT_ROW_HEIGHT - 1, 28, 13));
+            mapButton.text.set(Component.translatable("realism.gui.simres.map"));
+            mapButton.addEventListener(DLGuiStandardEvents.ClickEvent.class, (event, source) -> {
+                int index = rightPage * rightRows + row;
+                if (index >= rightRowList.size())
+                    return false;
+                Row rowEntry = rightRowList.get(index);
+                if (rowEntry.kind() == RowKind.CONFLICT) {
+                    SimulationPayload.ConflictLine conflict = payload.conflicts.get(rowEntry.index());
+                    RNetworking.sendToServer(new RequestGraphViewPacket(
+                            new BlockPos(conflict.x(), conflict.y(), conflict.z())));
+                } else if (rowEntry.kind() == RowKind.ROOT) {
+                    SimulationPayload.RootCauseLine cause = payload.rootCauses.get(rowEntry.index());
+                    RNetworking.sendToServer(new RequestGraphViewPacket(
+                            new BlockPos(cause.x(), cause.y(), cause.z())));
+                }
+                return false;
+            });
+            rightMapButtons[i] = mapButton;
         }
         DLButton previous = addComponent(new DLButton(rightX, pagerY, 20, 16));
         previous.text.set(Component.literal("<"));
@@ -350,15 +496,33 @@ public class SimulationResultsWindow extends DLWindow {
                 String display = fit(row.text(), rightWidth);
                 rightLabels[i].text.get().set(display);
                 rightTooltips[i] = display.equals(row.text()) ? null : row.text();
-                boolean train = row.kind() == RowKind.TRAIN;
-                rightToggleButtons[i].visible.set(train);
-                if (train)
+                boolean toggleable = row.kind() == RowKind.TRAIN || row.kind() == RowKind.CONFLICT
+                        || row.kind() == RowKind.ROOT;
+                rightToggleButtons[i].visible.set(toggleable);
+                if (toggleable) {
+                    Set<Integer> expanded = switch (row.kind()) {
+                        case TRAIN -> expandedTrains;
+                        case ROOT -> expandedRoots;
+                        default -> expandedConflicts;
+                    };
                     rightToggleButtons[i].text.set(Component.literal(
-                            expandedTrains.contains(row.trainIndex()) ? "-" : "+"));
+                            expanded.contains(row.index()) ? "-" : "+"));
+                }
+                // Jump-to-map only works in the dimension the player is in.
+                String rowDimension = row.kind() == RowKind.CONFLICT
+                        ? payload.conflicts.get(row.index()).dimension()
+                        : row.kind() == RowKind.ROOT
+                                ? payload.rootCauses.get(row.index()).dimension()
+                                : null;
+                rightMapButtons[i].visible.set(rowDimension != null
+                        && Minecraft.getInstance().level != null
+                        && rowDimension.equals(
+                                Minecraft.getInstance().level.dimension().location().toString()));
             } else {
                 rightLabels[i].text.get().set("");
                 rightTooltips[i] = null;
                 rightToggleButtons[i].visible.set(false);
+                rightMapButtons[i].visible.set(false);
             }
         }
         rightPageLabel.text.get().set(Component.translatable("realism.gui.simres.page",
@@ -368,6 +532,15 @@ public class SimulationResultsWindow extends DLWindow {
     // ------------------------------------------------------------------
     // Shared helpers
     // ------------------------------------------------------------------
+
+    /** A notice is a translation key, optionally "keyargument". */
+    private static String noticeText(String notice) {
+        int separator = notice.indexOf('\u001F');
+        if (separator < 0)
+            return Component.translatable(notice).getString();
+        return Component.translatable(notice.substring(0, separator),
+                notice.substring(separator + 1)).getString();
+    }
 
     /** A label that shows the supplied full text as a tooltip when hovered. */
     private DLRichTextLabel tooltipLabel(int x, int y, int width,
@@ -420,35 +593,22 @@ public class SimulationResultsWindow extends DLWindow {
             closeWindow();
             return false;
         });
+        if (!payload.refused() && !payload.diagramLines.isEmpty()) {
+            DLButton diagramButton = addComponent(
+                    new DLButton(windowWidth / 2 - 130, windowHeight - 24, 84, 20));
+            diagramButton.text.set(Component.translatable("realism.gui.simres.diagram"));
+            diagramButton.addEventListener(DLGuiStandardEvents.ClickEvent.class, (event, source) -> {
+                DLWindow.openWindow(manager -> new TimeDistanceDiagramWindow(manager, payload));
+                return false;
+            });
+        }
     }
 
-    /**
-     * A tick relative to sim start as wall-clock time ("D+1 08:30") when day
-     * time advances, otherwise as elapsed real time ("+12:30").
-     */
     private static String formatTime(SimulationPayload payload, long tick) {
-        if (payload.dayTimeRate <= 0) {
-            long seconds = tick / 20;
-            return String.format("+%d:%02d", seconds / 60, seconds % 60);
-        }
-        long dayTime = payload.startDayTime + Math.round(tick * payload.dayTimeRate);
-        long startDay = Math.floorDiv(payload.startDayTime + 6000, 24000);
-        long day = Math.floorDiv(dayTime + 6000, 24000);
-        int hour = (int) ((dayTime / 1000 + 6) % 24);
-        int minute = (int) ((dayTime % 1000) * 60 / 1000);
-        String clock = String.format("%02d:%02d", hour, minute);
-        return day > startDay ? "D+" + (day - startDay) + " " + clock : clock;
+        return SimTimeFormat.time(payload, tick);
     }
 
-    /** A tick count as in-game clock duration ("14m"), or real "m:ss" when frozen. */
     private static String formatDuration(SimulationPayload payload, long ticks) {
-        if (payload.dayTimeRate <= 0) {
-            long seconds = ticks / 20;
-            return String.format("%d:%02d", seconds / 60, seconds % 60);
-        }
-        long minutes = Math.round(ticks * payload.dayTimeRate * 60 / 1000.0);
-        if (minutes < 1)
-            return "<1m";
-        return minutes < 60 ? minutes + "m" : (minutes / 60) + "h " + (minutes % 60) + "m";
+        return SimTimeFormat.duration(payload, ticks);
     }
 }

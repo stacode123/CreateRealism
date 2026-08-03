@@ -40,6 +40,12 @@ public class SimTrainSpec {
     public java.util.UUID resumeDestination = null;
     /** Extra notices to surface with results (e.g. snapshot anchoring). */
     public final List<String> notices = new java.util.ArrayList<>();
+    /**
+     * True when this train's start state was anchored to the live snapshot
+     * (no time-of-day anchor in its schedule) — conflicts involving it are
+     * flagged non-deterministic.
+     */
+    public boolean liveAnchored = false;
     /** Whether pathfinding may turn the train around (double-ended). */
     public boolean canReverse = true;
     /** Speed at snapshot time (blocks/tick), so moving trains don't restart cold. */
