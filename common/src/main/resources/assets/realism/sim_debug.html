@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Realism Sim Playback</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #10101c; color: #d0d0e0;
+               font: 12px/1.4 monospace; }
+  #bar { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center;
+         padding: 6px 10px; background: #181828; border-bottom: 1px solid #303048; z-index: 2; }
+  #bar button, #bar select { background: #242438; color: #d0d0e0; border: 1px solid #404060;
+         font: inherit; padding: 2px 8px; cursor: pointer; }
+  #scrub { flex: 1; }
+  #clock { min-width: 90px; text-align: right; }
+  #info { position: fixed; left: 10px; bottom: 10px; background: #181828e0; padding: 6px 10px;
+          border: 1px solid #303048; white-space: pre; z-index: 2; display: none; }
+  #tip  { position: fixed; background: #181828f0; padding: 4px 8px; border: 1px solid #404060;
+          pointer-events: none; z-index: 3; display: none; white-space: pre; }
+  #cv { position: absolute; inset: 0; }
+  label { user-select: none; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <button id="play">&#9654;</button>
+  <select id="speed">
+    <option value="1">1x</option><option value="5">5x</option><option value="20" selected>20x</option>
+    <option value="60">60x</option><option value="300">300x</option><option value="1000">1000x</option>
+  </select>
+  <input id="scrub" type="range" min="0" value="0" step="1">
+  <span id="clock"></span>
+  <select id="dim"></select>
+  <label><input id="names" type="checkbox" checked> stations</label>
+  <span id="hint">drag pan &middot; wheel zoom &middot; click a train to follow &middot; space = play</span>
+</div>
+<div id="info"></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+"use strict";
+const DATA = /*__DATA__*/null;
+
+const PALETTE = ["#e0b040","#60a0ff","#ff6090","#80e0d0","#c080ff","#ffa060","#b0d060","#dd8888"];
+const CONFLICT_COLORS = ["#ff6040","#dd2222","#ffc020","#40c0ff"];
+const CONFLICT_NAMES = ["Signal wait","Deadlock","Headway","Platform"];
+
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const playBtn = document.getElementById("play"), scrub = document.getElementById("scrub");
+const clockEl = document.getElementById("clock"), dimSel = document.getElementById("dim");
+const infoEl = document.getElementById("info"), tipEl = document.getElementById("tip");
+const namesCb = document.getElementById("names"), speedSel = document.getElementById("speed");
+
+let t = 0, playing = false, lastFrame = 0;
+let cam = { x: 0, z: 0, scale: 1 };
+let dim = 0, selected = -1, follow = false;
+let mouse = { x: 0, y: 0, down: false, moved: false };
+
+// Samples are deduplicated at the source: a gap longer than the stride
+// means the train provably sat still at the earlier position. Without the
+// inserted hold points, interpolation would smear stationary trains
+// across the map for their whole dwell.
+const STRIDE = DATA.meta.stride || 100;
+for (const tr of DATA.trains) {
+  const out = [];
+  for (const s of tr.s) {
+    const prev = out[out.length - 1];
+    if (prev && s[0] - prev[0] > STRIDE * 1.5)
+      out.push([s[0] - STRIDE, prev[1], prev[2], 0]);
+    out.push(s);
+  }
+  tr.s = out;
+  // Each sample's index into the traversed edge path (monotone walk), so
+  // interpolation can follow the track between samples.
+  tr.path = tr.path || [];
+  tr.pc = [];
+  let cursor = 0;
+  for (const s of tr.s) {
+    let j = cursor;
+    while (j < tr.path.length && tr.path[j] !== s[1]) j++;
+    if (j < tr.path.length) { cursor = j; tr.pc.push(j); }
+    else tr.pc.push(-1);
+  }
+}
+
+scrub.max = DATA.meta.ticks;
+DATA.meta.dims.forEach((d, i) => {
+  const o = document.createElement("option");
+  o.value = i; o.textContent = d.replace(/^.*:/, "");
+  dimSel.appendChild(o);
+});
+dimSel.style.display = DATA.meta.dims.length > 1 ? "" : "none";
+
+function resize() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", resize); resize();
+
+function fit() {
+  let minX = 1e18, maxX = -1e18, minZ = 1e18, maxZ = -1e18, any = false;
+  for (const n of DATA.nodes) {
+    if (n[2] !== dim) continue;
+    any = true;
+    minX = Math.min(minX, n[0]); maxX = Math.max(maxX, n[0]);
+    minZ = Math.min(minZ, n[1]); maxZ = Math.max(maxZ, n[1]);
+  }
+  if (!any) return;
+  cam.x = (minX + maxX) / 2; cam.z = (minZ + maxZ) / 2;
+  cam.scale = Math.min(3, Math.min(cv.width / Math.max(64, maxX - minX + 80),
+                                   (cv.height - 40) / Math.max(64, maxZ - minZ + 80)));
+}
+fit();
+
+const sx = wx => (wx - cam.x) * cam.scale + cv.width / 2;
+const sy = wz => (wz - cam.z) * cam.scale + cv.height / 2;
+
+// World position at an offset along an edge (straight chord).
+function edgePos(e, o) {
+  const E = DATA.edges[e], A = DATA.nodes[E[0]], B = DATA.nodes[E[1]];
+  const f = E[2] > 0 ? Math.max(0, Math.min(1, o / E[2])) : 0;
+  return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2]];
+}
+
+// A train's interpolated [x, z, dim, speed] at the current time. Follows
+// the traversed edge path between samples so trains stay on the track;
+// falls back to a straight lerp across reversals or unmatched samples.
+function trainPos(train, time) {
+  const s = train.s;
+  if (!s.length) return null;
+  let lo = 0, hi = s.length - 1;
+  if (time <= s[0][0]) return edgePos(s[0][1], s[0][2]).concat(s[0][3]);
+  if (time >= s[hi][0]) return edgePos(s[hi][1], s[hi][2]).concat(s[hi][3]);
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (s[mid][0] <= time) lo = mid; else hi = mid; }
+  const a = s[lo], b = s[hi], f = (time - a[0]) / (b[0] - a[0]);
+  const speed = a[3] + (b[3] - a[3]) * f;
+  const ca = train.pc[lo], cb = train.pc[hi];
+
+  if (ca === cb && ca >= 0) {
+    const o = a[2] + (b[2] - a[2]) * f;
+    return edgePos(a[1], o).concat(speed);
+  }
+  if (ca >= 0 && cb > ca && pathHasNoReversal(train, ca, cb)) {
+    // Arc-length interpolation through the intermediate edges.
+    const lenA = DATA.edges[train.path[ca]][2];
+    let total = lenA - a[2];
+    for (let j = ca + 1; j < cb; j++) total += DATA.edges[train.path[j]][2];
+    total += b[2];
+    let dist = total * f;
+    if (dist <= lenA - a[2])
+      return edgePos(train.path[ca], a[2] + dist).concat(speed);
+    dist -= lenA - a[2];
+    for (let j = ca + 1; j < cb; j++) {
+      const len = DATA.edges[train.path[j]][2];
+      if (dist <= len) return edgePos(train.path[j], dist).concat(speed);
+      dist -= len;
+    }
+    return edgePos(train.path[cb], Math.min(dist, b[2])).concat(speed);
+  }
+  const pa = edgePos(a[1], a[2]), pb = edgePos(b[1], b[2]);
+  return [pa[0] + (pb[0] - pa[0]) * f, pa[1] + (pb[1] - pa[1]) * f, pa[2], speed];
+}
+
+function pathHasNoReversal(train, from, to) {
+  for (let j = from; j < to; j++)
+    if (DATA.edges[train.path[j]][4] === train.path[j + 1]) return false;
+  return true;
+}
+
+function waiting(train, time) {
+  for (const w of train.w) { if (time < w[0]) return false; if (time <= w[1]) return true; }
+  return false;
+}
+
+function waitDetail(train, time) {
+  for (const w of train.w) {
+    if (time < w[0]) return "";
+    if (time <= w[1]) {
+      let s = "waiting at signal";
+      if (w.length >= 4 && w[2] >= 0) {
+        s += " for edge " + w[2];
+        if (w[3] >= 0 && DATA.trains[w[3]]) s += " held by " + DATA.trains[w[3]].n;
+      }
+      return s;
+    }
+  }
+  return "";
+}
+
+function fmtTime(tick) {
+  const m = DATA.meta;
+  if (m.rate <= 0) {
+    const s = Math.floor(tick / 20);
+    return "+" + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+  const dayTime = m.start + Math.round(tick * m.rate);
+  const startDay = Math.floor((m.start + 6000) / 24000), day = Math.floor((dayTime + 6000) / 24000);
+  const hh = String((Math.floor(dayTime / 1000) + 6) % 24).padStart(2, "0");
+  const mm = String(Math.floor((dayTime % 1000) * 60 / 1000)).padStart(2, "0");
+  return (day > startDay ? "D+" + (day - startDay) + " " : "") + hh + ":" + mm;
+}
+
+function draw() {
+  ctx.fillStyle = "#10101c"; ctx.fillRect(0, 0, cv.width, cv.height);
+
+  ctx.lineWidth = 1.5; ctx.strokeStyle = "#8a8a96";
+  ctx.beginPath();
+  for (let i = 0; i < DATA.edges.length; i++) {
+    const E = DATA.edges[i];
+    if (E[4] >= 0 && E[4] < i) continue;               // one direction per pair
+    const A = DATA.nodes[E[0]], B = DATA.nodes[E[1]];
+    if (A[2] !== dim) continue;
+    ctx.moveTo(sx(A[0]), sy(A[1])); ctx.lineTo(sx(B[0]), sy(B[1]));
+  }
+  ctx.stroke();
+
+  // Entry signals: a dot just inside the governed edge.
+  if (cam.scale > 0.4)
+    for (let i = 0; i < DATA.edges.length; i++) {
+      const E = DATA.edges[i];
+      if (!E[3]) continue;
+      const A = DATA.nodes[E[0]], B = DATA.nodes[E[1]];
+      if (A[2] !== dim) continue;
+      const x = sx(A[0] + (B[0] - A[0]) * 0.06), y = sy(A[1] + (B[1] - A[1]) * 0.06);
+      ctx.fillStyle = E[3] === 2 ? "#ffa030" : "#ff5555";
+      ctx.fillRect(x - 2, y - 2, 4, 4);
+    }
+
+  ctx.fillStyle = "#55ddee";
+  for (const s of DATA.stations) {
+    const p = edgePos(s[0], s[1]);
+    if (p[2] !== dim) continue;
+    ctx.fillRect(sx(p[0]) - 2.5, sy(p[1]) - 2.5, 5, 5);
+    if (namesCb.checked && cam.scale > 0.5)
+      ctx.fillText(s[2], sx(p[0]) + 6, sy(p[1]) - 4);
+  }
+
+  for (const c of DATA.conflicts) {
+    if (c[5] !== dim) continue;
+    const active = t >= c[1] && t <= c[2];
+    const x = sx(c[3]), y = sy(c[4]), h = active ? 7 : 4;
+    ctx.globalAlpha = active ? 1 : 0.35;
+    ctx.fillStyle = CONFLICT_COLORS[c[0]] || "#ffffff";
+    ctx.beginPath();
+    ctx.moveTo(x, y - h); ctx.lineTo(x + h, y); ctx.lineTo(x, y + h); ctx.lineTo(x - h, y);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  for (let i = 0; i < DATA.trains.length; i++) {
+    const train = DATA.trains[i];
+    const p = trainPos(train, t);
+    if (!p || p[2] !== dim) continue;
+    const x = sx(p[0]), y = sy(p[1]);
+    // Short trail toward where the train came from.
+    const back = trainPos(train, Math.max(0, t - 150));
+    if (back && back[2] === dim && (back[0] !== p[0] || back[1] !== p[1])) {
+      ctx.strokeStyle = "#ffffff30"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx(back[0]), sy(back[1])); ctx.lineTo(x, y); ctx.stroke();
+    }
+    ctx.fillStyle = train.p ? "#40ff70" : train.o ? "#707078" : PALETTE[i % PALETTE.length];
+    ctx.beginPath(); ctx.arc(x, y, i === selected ? 6 : 4.5, 0, 7); ctx.fill();
+    if (waiting(train, t)) {
+      ctx.strokeStyle = "#ff3030"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.stroke();
+    }
+    if (i === selected || cam.scale > 0.35) {
+      ctx.fillStyle = "#e0e0f0";
+      ctx.fillText(train.n, x + 8, y + 3);
+    }
+  }
+
+  if (selected >= 0) {
+    const train = DATA.trains[selected], p = trainPos(train, t);
+    if (p) {
+      if (follow && p[2] === dim) { cam.x = p[0]; cam.z = p[1]; }
+      infoEl.style.display = "block";
+      infoEl.textContent = train.n
+          + "\nspeed " + (p[3] * 20 * 3.6).toFixed(1) + " km/h"
+          + "\n" + (waiting(train, t) ? waitDetail(train, t)
+                   : p[3] > 1e-4 ? "moving" : "stopped")
+          + "\nend state: " + train.end;
+    }
+  } else infoEl.style.display = "none";
+
+  clockEl.textContent = fmtTime(t) + "  (" + Math.floor(t) + "t)";
+}
+
+function frame(now) {
+  if (playing) {
+    const dt = Math.min(0.25, (now - lastFrame) / 1000);
+    t = Math.min(DATA.meta.ticks, t + dt * 20 * Number(speedSel.value));
+    scrub.value = Math.floor(t);
+    if (t >= DATA.meta.ticks) setPlaying(false);
+  }
+  lastFrame = now;
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function setPlaying(on) { playing = on; playBtn.innerHTML = on ? "&#10074;&#10074;" : "&#9654;"; }
+playBtn.onclick = () => setPlaying(!playing);
+scrub.oninput = () => { t = Number(scrub.value); };
+dimSel.onchange = () => { dim = Number(dimSel.value); fit(); };
+addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target === document.body) { setPlaying(!playing); e.preventDefault(); }
+  if (e.code === "ArrowRight") t = Math.min(DATA.meta.ticks, t + (e.shiftKey ? 1000 : 100));
+  if (e.code === "ArrowLeft") t = Math.max(0, t - (e.shiftKey ? 1000 : 100));
+});
+
+cv.addEventListener("mousedown", e => { mouse.down = true; mouse.moved = false; });
+addEventListener("mouseup", e => {
+  if (mouse.down && !mouse.moved) {
+    let best = -1, bestD = 12;
+    for (let i = 0; i < DATA.trains.length; i++) {
+      const p = trainPos(DATA.trains[i], t);
+      if (!p || p[2] !== dim) continue;
+      const d = Math.hypot(sx(p[0]) - e.clientX, sy(p[1]) - e.clientY);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    selected = best; follow = best >= 0;
+  }
+  mouse.down = false;
+});
+cv.addEventListener("mousemove", e => {
+  if (mouse.down) {
+    cam.x -= e.movementX / cam.scale; cam.z -= e.movementY / cam.scale;
+    mouse.moved = true; follow = false;
+  }
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  let tip = null;
+  for (const c of DATA.conflicts) {
+    if (c[5] !== dim) continue;
+    if (Math.hypot(sx(c[3]) - e.clientX, sy(c[4]) - e.clientY) < 8)
+      tip = CONFLICT_NAMES[c[0]] + (c[6] ? " - " + c[6] : "")
+          + "\n" + fmtTime(c[1]) + " - " + fmtTime(c[2]) + "\n" + c[7];
+  }
+  if (tip) {
+    tipEl.style.display = "block"; tipEl.textContent = tip;
+    tipEl.style.left = (e.clientX + 14) + "px"; tipEl.style.top = (e.clientY + 14) + "px";
+  } else tipEl.style.display = "none";
+});
+cv.addEventListener("wheel", e => {
+  const factor = Math.pow(1.2, -Math.sign(e.deltaY));
+  const wx = (e.clientX - cv.width / 2) / cam.scale + cam.x;
+  const wz = (e.clientY - cv.height / 2) / cam.scale + cam.z;
+  cam.scale = Math.max(0.02, Math.min(12, cam.scale * factor));
+  cam.x = wx - (e.clientX - cv.width / 2) / cam.scale;
+  cam.z = wz - (e.clientY - cv.height / 2) / cam.scale;
+  e.preventDefault();
+}, { passive: false });
+</script>
+</body>
+</html>
