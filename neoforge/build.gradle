@@ -122,6 +122,9 @@ publishMods {
         accessToken = System.getenv("CURSEFORGE_TOKEN")
         minecraftVersions.add(minecraft_version)
         modLoaders.add("neoforge")
+        // CurseForge requires at least one environment version; pre-2.0 MPP uses the *Required names
+        clientRequired = true
+        serverRequired = true
 
         requires("create")
         requires("architectury-api")
