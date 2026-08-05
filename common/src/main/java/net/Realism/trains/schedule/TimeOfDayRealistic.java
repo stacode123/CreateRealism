@@ -1,5 +1,6 @@
 package net.Realism.trains.schedule;
 
+import com.google.common.collect.ImmutableList;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.schedule.condition.TimeOfDayCondition;
 import com.simibubi.create.foundation.gui.ModularGuiLineBuilder;
@@ -8,17 +9,53 @@ import com.simibubi.create.foundation.gui.widget.ScrollInput;
 import com.simibubi.create.foundation.utility.CreateLang;
 import net.Realism.Interfaces.IScheduleRuntimeMixin;
 import net.Realism.RealismMod;
+import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.mutable.MutableObject;
 
+import java.util.List;
+
+/**
+ * Timetable departure. Each stop books an absolute departure tick - its slot - and the train
+ * leaves the moment it is both ready and past that slot. A train that pulls in behind schedule
+ * finds its slot already in the past and leaves at once, exactly like a delayed service, and it
+ * keeps leaving at once at every following stop until the timetable catches up with it again.
+ * <p>
+ * What keeps that from turning into a train that never waits at all is that slots are strictly
+ * increasing: the next one is always the first matching time of day <em>after</em> the slot just
+ * used. So a loop calling at the same station twice books tomorrow rather than departing on the
+ * spot, while a genuinely late train still gets to run.
+ * <p>
+ * Unlike Create's own {@link TimeOfDayCondition}, which departs only if it happens to tick inside
+ * a 40 tick window around the target, a booked slot can never be missed.
+ */
 public class TimeOfDayRealistic extends TimeOfDayCondition {
+
+    /** Length of a Minecraft day in ticks. */
+    private static final long DAY = 24000L;
+    /** Day time 0 is 06:00, so this shifts it to "ticks since midnight". */
+    private static final long MIDNIGHT_OFFSET = 6000L;
+    /**
+     * How far behind the timetable a train may be and still be treated as merely late. Past this
+     * it is re-timetabled onto the next slot after its arrival, so a train that was derailed or
+     * parked for weeks does not sprint through whole cycles of backlog to catch up.
+     */
+    private static final long MAX_RECOVERY = 7L * DAY;
+    /** Absolute game time this train may depart at, kept in the per-condition context tag. */
+    private static final String DEPART_AT = "RealismDepartAt";
+
     public TimeOfDayRealistic() {
         data.putInt("Hour", 8);
         data.putInt("Minute", 0);
         data.putInt("Rotation", 0);
     }
+
     @Override
     public ResourceLocation getId() {
         return RealismMod.id("time_of_day_realistic");
@@ -26,44 +63,90 @@ public class TimeOfDayRealistic extends TimeOfDayCondition {
 
     @Override
     public boolean tickCompletion(Level level, Train train, CompoundTag context) {
-        int maxTickDiff = 10;
-        IScheduleRuntimeMixin runtime = (IScheduleRuntimeMixin) train.runtime;
-        int targetHour = intData("Hour");
-        int targetMinute = intData("Minute");
-        long gtime = level.getGameTime();
-        long depDate = runtime.getDepartureDate();
-        long wtme = level.getDayTime();
-        int wctime = (int) (wtme+6000)%24000;
-        int gctime = (int) (gtime+6000)%24000;
-        int discrepancy = 6000+ (wctime - gctime);
-        int date = (int) Math.floor((double) (gtime+discrepancy)/24000);
-        int expectedTargetDate = (int) Math.floor((double) (runtime.getExpectedArrivalDate()+discrepancy) /24000);
-        int targetTicks = (int)((expectedTargetDate * 24000) + (targetHour * 1000) +  Math.ceil(targetMinute / 60f * 1000));
-        int diff = (int) (targetTicks - (gtime+discrepancy));
-        int targetDayTime = (int) ((targetHour * 1000) +  Math.ceil(targetMinute / 60f * 1000));
-        int depDayTime = runtime.getLastScheduledDepartureDate();
-        //Handle same station, same day rollover
-        if (diff < 0  && Math.abs(depDate -gtime) < maxTickDiff && !(runtime.dontCheck())){
-            long x = runtime.getExpectedArrivalDate()+ 24000;
-            runtime.setExpectedArrivalDate(x);
-            targetTicks = (int) (((expectedTargetDate+1) * 24000) + (targetHour * 1000) +  Math.ceil(targetMinute / 60f * 1000));
-            diff = (int) (targetTicks - (gtime+discrepancy));
-        }
-        //Handle same day rollover with travel
-        else if (diff < 0 && targetDayTime < depDayTime &&!(runtime.dontCheck())){
-            long x = runtime.getExpectedArrivalDate()+24000;
-            runtime.setExpectedArrivalDate(x);
-            targetTicks = (int) (((expectedTargetDate+1) * 24000) + (targetHour * 1000) +  Math.ceil(targetMinute / 60f * 1000));
-            diff = (int) (targetTicks - (gtime+discrepancy));
+        long now = level.getGameTime();
+        long slot = bookedSlot(level, train, context, now);
+        if (now < slot)
+            return false;
+        if (train.runtime instanceof IScheduleRuntimeMixin runtime)
+            runtime.setLastDepartureSlot(slot);
+        return true;
+    }
+
+    /**
+     * Absolute game time of this stop's departure. Resolved once per stop and cached in the
+     * context tag, which Create clears whenever the train arrives somewhere or this condition
+     * is satisfied - so every stop books its own slot.
+     */
+    private long bookedSlot(Level level, Train train, CompoundTag context, long now) {
+        if (context.contains(DEPART_AT, Tag.TAG_LONG)) {
+            long stored = context.getLong(DEPART_AT);
+            // A slot is never more than a day ahead; anything else is a leftover from an edited
+            // schedule or a world time change, so book a new one.
+            if (stored - now <= DAY)
+                return stored;
         }
 
-        runtime.setDontCheck(true);
+        long slot = bookSlot(level, train, now);
+        context.putLong(DEPART_AT, slot);
+        requestStatusToUpdate(context);
+        return slot;
+    }
 
-        if (diff<=0) {
-            runtime.setLastScheduledDepartureDate(targetDayTime);
-            return diff <= 0;
+    private long bookSlot(Level level, Train train, long now) {
+        long arrival = arrival(train, now);
+        if (train.runtime instanceof IScheduleRuntimeMixin runtime) {
+            long previous = runtime.getLastDepartureSlot();
+            // Chain onto the previous slot rather than onto the arrival, so that being late only
+            // moves the train, never the timetable.
+            if (previous > 0 && previous <= arrival && arrival - previous <= MAX_RECOVERY)
+                return occurrenceFrom(level, previous, now, false);
         }
-        return false;
+        return occurrenceFrom(level, arrival, now, true);
+    }
+
+    /** The moment the train started waiting here, falling back to now if that is unknown. */
+    private long arrival(Train train, long now) {
+        if (!(train.runtime instanceof IScheduleRuntimeMixin runtime))
+            return now;
+        long arrival = runtime.getArrivalGameTime();
+        if (arrival <= 0 || arrival > now || now - arrival > MAX_RECOVERY)
+            return now;
+        return arrival;
+    }
+
+    /**
+     * First game time matching the configured time of day, counted from {@code from} - inclusive
+     * of {@code from} itself, or a full day later when {@code inclusive} is false.
+     */
+    private long occurrenceFrom(Level level, long from, long now, boolean inclusive) {
+        // Day time and game time advance in lockstep, so rewinding by the elapsed ticks gives the
+        // time of day back at that moment.
+        long timeOfDay = Math.floorMod(level.getDayTime() - (now - from) + MIDNIGHT_OFFSET, DAY);
+        long untilTarget = Math.floorMod(targetTimeOfDay() - timeOfDay, DAY);
+        if (untilTarget == 0 && !inclusive)
+            untilTarget = DAY;
+        return from + untilTarget;
+    }
+
+    /** Configured departure as ticks since midnight, always within a single day. */
+    private long targetTimeOfDay() {
+        long hour = Mth.clamp(intData("Hour"), 0, 23);
+        long minute = Mth.clamp(intData("Minute"), 0, 59);
+        return hour * 1000L + Math.round(minute * 1000d / 60d);
+    }
+
+    @Override
+    public MutableComponent getWaitingStatus(Level level, Train train, CompoundTag tag) {
+        return CreateLang.translateDirect("schedule.condition.time_of_day.status")
+                .append(getDigitalDisplay(intData("Hour"), intData("Minute"), false));
+    }
+
+    @Override
+    public List<Component> getTitleAs(String type) {
+        ResourceLocation id = getId();
+        return ImmutableList.of(
+                Component.translatable(id.getNamespace() + ".schedule." + type + "." + id.getPath()),
+                getDigitalDisplay(intData("Hour"), intData("Minute"), false).withStyle(ChatFormatting.DARK_AQUA));
     }
 
     @Override
@@ -108,10 +191,11 @@ public class TimeOfDayRealistic extends TimeOfDayCondition {
         minuteInput.getValue().lockedTooltipY = hourInput.getValue().lockedTooltipY = 35;
 
         hourInput.getValue()
-                .setState(intData("Hour"));
+                .setState(Mth.clamp(intData("Hour"), 0, 23));
         minuteInput.getValue()
-                .setState(intData("Minute"))
+                .setState(Mth.clamp(intData("Minute"), 0, 59))
                 .onChanged();
 
         builder.customArea(0, 52);
-    }}
+    }
+}
