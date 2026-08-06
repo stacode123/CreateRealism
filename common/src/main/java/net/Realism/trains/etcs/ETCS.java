@@ -43,6 +43,8 @@ public class ETCS {
 
     private double speedLimit = -1; // -1 means no limit
     private double distanceToSignal = 0;
+    // Unused since the needle became a render-time calculation; still carried in the
+    // sync packet and NBT so mixed 0.6.x clients stay wire-compatible.
     private float needleRotationDegrees = 0;
 
     // Last update timestamp to handle client/server synchronization
@@ -146,8 +148,9 @@ public class ETCS {
         }
         cachedAllowedSpeed = speedLimit;
 
-        // Calculate needle rotation based on train speed
-        this.needleRotationDegrees = ETCStools.calculateNeedleRotation(train.speed);
+        // Needle rotation is computed client-side at render time, from the viewer's
+        // own km/h-vs-mph setting - computing it here would read the client config
+        // on the dedicated server, where that spec is never loaded.
 
         // Update braking distances
 

@@ -1,3 +1,3 @@
-## 0.6.5
+## 0.6.7
 ### Fixed
-- Fixed a crash caused by config setup
+- Fixed a dedicated server crash caused by the ETCS speedometer reading the client config during the train tick

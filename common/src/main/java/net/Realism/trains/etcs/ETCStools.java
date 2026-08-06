@@ -14,7 +14,9 @@ import org.joml.Matrix4f;
 
 public class ETCStools {
     /**
-     * Calculate the needle rotation angle based on current train speed
+     * Calculate the needle rotation angle based on current train speed.
+     * Client-only: it reads the client's km/h-vs-mph preference, so it must be
+     * called at render time and never from the train tick.
      */
     public static float calculateNeedleRotation(double trainSpeed) {
         float rotationDegrees;
