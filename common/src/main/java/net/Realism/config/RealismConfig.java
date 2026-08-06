@@ -82,6 +82,11 @@ public class RealismConfig {
     public static final ModConfigSpec CLIENT_SPEC;
     public static final Client CLIENT;
 
+    // NOTE: CLIENT_SPEC is only registered on the physical client. Reading any CLIENT
+    // value from code that can also run on a dedicated server throws
+    // "Cannot get config value before config is loaded" - keep such reads on the
+    // logical client (render path, or behind a level.isClientSide check).
+
     static {
         ModConfigSpec.Builder commonBuilder = new ModConfigSpec.Builder();
         COMMON = new Common(commonBuilder);
