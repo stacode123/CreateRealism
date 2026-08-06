@@ -45,8 +45,12 @@ public class CarriageDimensionalEntityMixin {
      */
     @Inject(method = "alignEntity", at = @At("TAIL"))
     private void calculateAndApplyBanking(CarriageContraptionEntity entity, CallbackInfo ci) {
-        // Check if banking is enabled
-        if (!RealismConfig.CLIENT.enableBanking.get() || !RealismConfig.COMMON.GlobalBankingEnable.get()) {
+        // Check if banking is enabled. The client spec is never loaded on a dedicated
+        // server, so it may only be read on the logical client.
+        if (!RealismConfig.COMMON.GlobalBankingEnable.get()) {
+            return;
+        }
+        if (entity.level().isClientSide && !RealismConfig.CLIENT.enableBanking.get()) {
             return;
         }
 
