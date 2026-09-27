@@ -28,6 +28,7 @@ public class RouteGuidance {
     public UUID resolvedStationId = null;
     public List<Couple<TrackNode>> path = new ArrayList<>();
     public double distanceToDestination = 0;
+    public boolean destinationBehindTrain = false;
     public long lastPathTick = -1;
     public boolean valid = false;
 
@@ -42,6 +43,7 @@ public class RouteGuidance {
         resolvedStationId = null;
         path = new ArrayList<>();
         distanceToDestination = 0;
+        destinationBehindTrain = false;
         lastPathTick = -1;
         valid = false;
     }
