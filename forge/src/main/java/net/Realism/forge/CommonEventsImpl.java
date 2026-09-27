@@ -13,4 +13,10 @@ public class CommonEventsImpl {
         if (event.getEntity() instanceof ServerPlayer player)
             CommonEvents.onPlayerJoin(player);
     }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player)
+            CommonEvents.onPlayerLeave(player);
+    }
 }

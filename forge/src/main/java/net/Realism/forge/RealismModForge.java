@@ -15,6 +15,9 @@ public class RealismModForge {
         IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         EventBuses.registerModEventBus(RealismMod.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
         RealismMod.init();
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
+            RealismMod.clientSetup();
+        }
         eventBus.addListener(this::commonSetup);
         ForgeConfigRegistration.register();
     }

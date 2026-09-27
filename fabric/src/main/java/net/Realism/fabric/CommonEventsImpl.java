@@ -8,5 +8,8 @@ public class CommonEventsImpl {
         ServerPlayConnectionEvents.JOIN.register((listener, sender, server) ->
                 CommonEvents.onPlayerJoin(listener.player)
         );
+        ServerPlayConnectionEvents.DISCONNECT.register((listener, server) ->
+                CommonEvents.onPlayerLeave(listener.player)
+        );
     }
 }

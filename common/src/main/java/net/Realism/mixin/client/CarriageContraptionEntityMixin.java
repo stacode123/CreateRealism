@@ -3,6 +3,7 @@ package net.Realism.mixin.client;
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.trains.RouteGuidanceManager;
 import net.Realism.trains.etcs.ETCS;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -21,6 +22,8 @@ public class CarriageContraptionEntityMixin {
     @Inject(method = "startControlling", at = @At("RETURN"), cancellable = true)
     private void afterStartControlling(BlockPos controlsLocalPos, Player player, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) {
+            // A fresh driving session starts with no guidance.
+            RouteGuidanceManager.clearClient(player.getUUID());
             if (carriage.train instanceof ITrainInterface RTrain) {
                 if (RTrain.realism$getETCS() == null) {
                     RTrain.realism$setETCS(new ETCS(carriage.train));
