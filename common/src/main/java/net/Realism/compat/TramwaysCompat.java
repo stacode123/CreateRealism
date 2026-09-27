@@ -102,9 +102,15 @@ public class TramwaysCompat {
                     else if (demand instanceof TemporaryEndSignDemand && first) {
                        double tempSpeedLimit = 300.0;
                         try {
-                            java.lang.reflect.Field tempSPeedLimitField = train.getClass().getDeclaredField("tramways$storedPermanent");
-                            tempSPeedLimitField.setAccessible(true);
-                            tempSpeedLimit = (double) tempSPeedLimitField.get(train);
+                            java.lang.reflect.Field tempSPeedLimitField = findField(train.getClass(), "tramways$storedPermanent");
+                            if (tempSPeedLimitField != null) {
+                                tempSPeedLimitField.setAccessible(true);
+                                Object storedPermanent = tempSPeedLimitField.get(train);
+                                // The field is a boxed Double and is null until Tramways sets it
+                                if (storedPermanent instanceof Number number) {
+                                    tempSpeedLimit = number.doubleValue();
+                                }
+                            }
                         }
                         catch (Exception e) {
                             RealismMod.LOGGER.error("Error accessing tempSpeedLimit field: " + e.getMessage());
@@ -122,6 +128,17 @@ public class TramwaysCompat {
 
     public static boolean isLoaded() {
         return tramwaysLoaded;
+    }
+
+    private static java.lang.reflect.Field findField(Class<?> type, String name) {
+        for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+            try {
+                return current.getDeclaredField(name);
+            } catch (NoSuchFieldException ignored) {
+                // keep walking up the hierarchy
+            }
+        }
+        return null;
     }
 
     public static Object createTramSignInfo(UUID signId, double distance, Object signType, boolean primary) {
