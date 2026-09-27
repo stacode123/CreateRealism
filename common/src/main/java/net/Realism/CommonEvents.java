@@ -1,5 +1,6 @@
 package net.Realism;
 
+import net.Realism.trains.RouteGuidanceManager;
 import net.minecraft.server.level.ServerPlayer;
 
 public class CommonEvents {
@@ -7,4 +8,7 @@ public class CommonEvents {
         RNetworking.onPlayerJoin(player);
     }
 
+    public static void onPlayerLeave(ServerPlayer player) {
+        RouteGuidanceManager.clearServer(player.getUUID());
+    }
 }

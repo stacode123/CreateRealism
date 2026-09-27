@@ -45,6 +45,7 @@ public class AbstractContraptionEntityMixin {
                     RTrain.realism$getETCS().stop();
                 }
             }
+            net.Realism.RealismClientSetup.clearGuidance();
         }
     }
 

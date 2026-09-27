@@ -13,6 +13,8 @@ import net.Realism.config.RealismConfig;
 import net.Realism.network.ETCSStartStopPacket;
 import net.Realism.network.ETCSSyncPacket;
 import net.Realism.network.SteerDirectionPacket;
+import net.Realism.trains.RouteGuidance;
+import net.Realism.trains.RouteGuidanceManager;
 import net.Realism.trains.SignalFinder;
 import net.Realism.trains.SignalFinder.SignalScanResult;
 import net.minecraft.client.Minecraft;
@@ -101,7 +103,15 @@ public class ETCS {
 
 
 
-        SignalScanResult s = SignalFinder.scanAheadForSignals(train, (double) 4000 /zoom, backward);
+        // When the driver has set a destination station, scan along that route and stop there.
+        RouteGuidance guidance = RouteGuidanceManager.getForTrain(train);
+        if (guidance != null) {
+            RouteGuidanceManager.ensurePath(train, guidance);
+            if (!guidance.valid) guidance = null;
+        }
+        SignalScanResult s = guidance != null
+                ? SignalFinder.scanAheadForSignals(train, (double) 4000 /zoom, backward, guidance)
+                : SignalFinder.scanAheadForSignals(train, (double) 4000 /zoom, backward);
 
         // Logic to decide whether to use previous scan result
         if (previousSignalScanResult != null) {

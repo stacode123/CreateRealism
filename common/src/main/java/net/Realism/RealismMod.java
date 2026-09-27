@@ -21,6 +21,11 @@ public class RealismMod {
         RExtras.Schedule.register();
     }
 
+    /** Client-only setup. Must only be invoked on the physical client. */
+    public static void clientSetup() {
+        RealismClientSetup.register();
+    }
+
 
 
 

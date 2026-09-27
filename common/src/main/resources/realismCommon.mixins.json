@@ -13,6 +13,7 @@
   "mixins": [
     "BezierConnectionMixin",
     "CarriageDimensionalEntityMixin",
+    "NavigationMixin",
     "OrientedContraptionEntityMixin",
     "ScheduleRuntimeMixin",
     "TrainMixin",
