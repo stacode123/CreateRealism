@@ -13,7 +13,6 @@ import com.simibubi.create.content.trains.station.GlobalStation;
 import net.Realism.RNetworking;
 import net.Realism.network.RouteGuidanceUpdatePacket;
 import net.createmod.catnip.data.Couple;
-import net.createmod.catnip.data.Pair;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -100,8 +99,8 @@ public final class RouteGuidanceManager {
     // ------------------------------------------------------------------ path computation
 
     /**
-     * Recomputes the forward route. Returns false (and marks the guidance invalid) when the station
-     * cannot be found, is not reachable going forward, or no path exists.
+     * Recomputes the route using Create's own {@code Navigation.findPathTo}. Returns false (and
+     * marks the guidance invalid) when the station cannot be found or no drivable path exists.
      */
     public static boolean recomputePath(Train train, RouteGuidance g) {
         if (g == null) return false;
@@ -113,14 +112,16 @@ public final class RouteGuidanceManager {
         GlobalStation station = findStationByName(train, g.destinationName);
         if (station == null) return false;
 
-        // Forward-only: never route the driver out of the station they are facing away from.
-        DiscoveredPath found = findForwardPath(train, station);
+        // Same entry point base Create uses for schedules and the "approach station" prompt:
+        // it searches both directions and returns whichever is drivable (conductor rules apply).
+        DiscoveredPath found = train.navigation.findPathTo(station, -1);
         if (found == null || found.path == null) return false;
 
         g.trainId = train.id;
         g.resolvedStationId = station.id;
         g.path = new ArrayList<>(found.path);
         g.distanceToDestination = found.distance;
+        g.destinationBehindTrain = found.distance < 0;
         g.valid = true;
         return true;
     }
@@ -139,44 +140,6 @@ public final class RouteGuidanceManager {
             if (station.name != null && station.name.equals(name)) return station;
         }
         return null;
-    }
-
-    /**
-     * Forward-only path finder. Mirrors the forward half of Create's {@code Navigation.findPathTo}
-     * but never considers reversing, so the route always matches "hold W".
-     */
-    private static DiscoveredPath findForwardPath(Train train, GlobalStation destination) {
-        if (train.graph == null || train.carriages.isEmpty()) return null;
-
-        ArrayList<GlobalStation> destinations = new ArrayList<>();
-        destinations.add(destination);
-        final DiscoveredPath[] result = new DiscoveredPath[1];
-
-        train.navigation.search(Double.MAX_VALUE, -1, true, destinations,
-                (distance, cost, reachedVia, currentEntry, globalStation) -> {
-                    if (globalStation != destination) return false;
-
-                    TrackEdge edge = currentEntry.getSecond();
-                    TrackNode node1 = currentEntry.getFirst().getFirst();
-                    TrackNode node2 = currentEntry.getFirst().getSecond();
-
-                    List<Couple<TrackNode>> path = new ArrayList<>();
-                    Pair<Boolean, Couple<TrackNode>> backTrack = reachedVia.get(edge);
-                    Couple<TrackNode> toReach = Couple.create(node1, node2);
-                    TrackEdge edgeReached = edge;
-                    while (backTrack != null) {
-                        if (backTrack.getFirst()) path.add(0, toReach);
-                        toReach = backTrack.getSecond();
-                        edgeReached = train.graph.getConnection(toReach);
-                        backTrack = reachedVia.get(edgeReached);
-                    }
-
-                    double position = edge.getLength() - destination.getLocationOn(edge);
-                    result[0] = new DiscoveredPath(distance - position, cost, path, destination);
-                    return true;
-                });
-
-        return result[0];
     }
 
     private static long gameTime(Train train) {

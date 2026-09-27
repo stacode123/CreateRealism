@@ -51,7 +51,7 @@
   "realism.gui.route.destination": "Destination Station:",
   "realism.gui.route.auto_steer": "Auto steer at junctions",
   "realism.gui.route.clear": "Clear",
-  "realism.route_guidance.no_route": "No forward route to \"%s\".",
+  "realism.route_guidance.no_route": "No drivable route to \"%s\".",
 
   "key.realism.route_guidance": "Open Route Guidance",
   "key.categories.realism": "Create: Realism"
