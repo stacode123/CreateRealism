@@ -28,9 +28,18 @@ public class TrainSettings {
     public float customTiltIntensity = 1.0f;
 
     public boolean Inside = true;
+    public boolean etcs = false;
 
     public boolean isInside() {
         return Inside;
+    }
+
+    public boolean isEtcsEnabled() {
+        return etcs;
+    }
+
+    public void setEtcsEnabled(boolean etcs) {
+        this.etcs = etcs;
     }
 
     public boolean isTiltDisabled() {
@@ -82,6 +91,7 @@ public class TrainSettings {
         tag.putDouble("CustomMinSpeed", this.customMinSpeed);
         tag.putFloat("CustomTiltIntensity", this.customTiltIntensity);
         tag.putBoolean("Inside", this.Inside);
+        tag.putBoolean("etcs", this.etcs);
         return tag;
     }
 
@@ -94,6 +104,11 @@ public class TrainSettings {
         settings.customMinSpeed = tag.getDouble("CustomMinSpeed");
         settings.customTiltIntensity = tag.getFloat("CustomTiltIntensity");
         settings.Inside = tag.getBoolean("Inside");
+        if (tag.contains("etcs")) {
+            settings.etcs = tag.getBoolean("etcs");
+        } else if (tag.contains("ETCS")) {
+            settings.etcs = tag.getBoolean("ETCS");
+        }
         return settings;
     }
 }

@@ -64,8 +64,9 @@ public abstract class TrainMixin implements ITrainInterface {
         if (this.realism$etcs == null) {
             this.realism$setETCS(new ETCS((Train)(Object)this));
         }
-        if(this.realism$etcs.toUpdate){
-        this.realism$etcs.update();
+        boolean etcsEnabled = (this.realism$Settings != null && this.realism$Settings.etcs) || RealismConfig.COMMON.GlobalETCSEnable.get();
+        if(this.realism$etcs.toUpdate || etcsEnabled){
+            this.realism$etcs.update();
         }
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
