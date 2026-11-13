@@ -15,11 +15,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Timetable bookkeeping for {@link net.Realism.trains.schedule.TimeOfDayRealistic}: when the train
- * started waiting at its current stop, and which departure slot it last left on. The latter has to
- * live here rather than in the condition's context tag because it carries across stops.
+ * Timetable bookkeeping for {@link net.Realism.trains.schedule.TimeOfDayRealistic}: the day time
+ * the train started waiting at its current stop, and the day time it last departed on. Both are
+ * tracked in day time rather than game time, so a mod that changes how fast day time advances (or
+ * freezes it) cannot desync the timetable from what the world clock actually shows. The latter has
+ * to live here rather than in the condition's context tag because it carries across stops.
  * <p>
- * {@code destinationReached} has no level to read the game time from, hence the flag that the next
+ * {@code destinationReached} has no level to read the day time from, hence the flag that the next
  * {@code tickConditions} turns into a timestamp.
  */
 @Mixin(value = ScheduleRuntime.class, remap = false)
@@ -29,11 +31,11 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
     public ScheduleRuntime.State state;
 
     @Unique
-    private long realism$arrivalGameTime;
+    private long realism$arrivalDayTime;
     @Unique
     private boolean realism$arrivalPending;
     @Unique
-    private long realism$lastDepartureSlot;
+    private long realism$lastDepartureDayTime;
 
     @Inject(method = "destinationReached", at = @At("HEAD"))
     private void realism$markArrival(CallbackInfo ci) {
@@ -46,44 +48,44 @@ public abstract class ScheduleRuntimeMixin implements IScheduleRuntimeMixin {
         if (!realism$arrivalPending)
             return;
         realism$arrivalPending = false;
-        realism$arrivalGameTime = level.getGameTime();
+        realism$arrivalDayTime = level.getDayTime();
     }
 
     @Override
-    public long getArrivalGameTime() {
-        return realism$arrivalGameTime;
+    public long getArrivalDayTime() {
+        return realism$arrivalDayTime;
     }
 
     @Override
-    public long getLastDepartureSlot() {
-        return realism$lastDepartureSlot;
+    public long getLastDepartureDayTime() {
+        return realism$lastDepartureDayTime;
     }
 
     @Override
-    public void setLastDepartureSlot(long slot) {
-        realism$lastDepartureSlot = slot;
+    public void setLastDepartureDayTime(long dayTime) {
+        realism$lastDepartureDayTime = dayTime;
     }
 
     /** A fresh schedule starts a fresh timetable rather than chaining onto the old one. */
     @Inject(method = "reset", at = @At("TAIL"))
     private void realism$clearTimetable(CallbackInfo ci) {
-        realism$lastDepartureSlot = 0;
-        realism$arrivalGameTime = 0;
+        realism$lastDepartureDayTime = 0;
+        realism$arrivalDayTime = 0;
         realism$arrivalPending = false;
     }
 
     @Inject(method = "write", at = @At("RETURN"))
     private void realism$write(CallbackInfoReturnable<CompoundTag> cir) {
         CompoundTag tag = cir.getReturnValue();
-        tag.putLong("RealismArrivalGameTime", realism$arrivalGameTime);
+        tag.putLong("RealismArrivalDayTime", realism$arrivalDayTime);
         tag.putBoolean("RealismArrivalPending", realism$arrivalPending);
-        tag.putLong("RealismLastDepartureSlot", realism$lastDepartureSlot);
+        tag.putLong("RealismLastDepartureDayTime", realism$lastDepartureDayTime);
     }
 
     @Inject(method = "read", at = @At("TAIL"))
     private void realism$read(HolderLookup.Provider registries, CompoundTag tag, CallbackInfo ci) {
-        realism$arrivalGameTime = tag.getLong("RealismArrivalGameTime");
+        realism$arrivalDayTime = tag.getLong("RealismArrivalDayTime");
         realism$arrivalPending = tag.getBoolean("RealismArrivalPending");
-        realism$lastDepartureSlot = tag.getLong("RealismLastDepartureSlot");
+        realism$lastDepartureDayTime = tag.getLong("RealismLastDepartureDayTime");
     }
 }
