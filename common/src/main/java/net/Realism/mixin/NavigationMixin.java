@@ -32,7 +32,7 @@ public abstract class NavigationMixin {
         if (this.destination != null) return;
 
         RouteGuidance guidance = RouteGuidanceManager.getForTrain(this.train);
-        if (guidance == null) return;
+        if (guidance == null || !guidance.valid) return;
 
         TravellingPoint.ITrackSelector fallback = mp.steer(this.train.manualSteer, new Vec3(0, 1, 0));
         cir.setReturnValue(RouteGuidanceManager.createSteeringSelector(this.train, guidance, fallback));

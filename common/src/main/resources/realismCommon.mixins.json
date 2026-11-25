@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "client": [
     "client.CarriageContraptionEntityMixin",
+    "client.ControlsHandlerMixin",
     "client.StationScreenMixin",
     "client.TrackPlacementMixin",
     "mixinaccesors.PlacementInfoAccessor",

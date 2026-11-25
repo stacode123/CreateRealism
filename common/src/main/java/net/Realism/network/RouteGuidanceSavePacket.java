@@ -17,12 +17,12 @@ public class RouteGuidanceSavePacket implements C2SPacket {
     }
 
     public static RouteGuidanceSavePacket read(FriendlyByteBuf buf) {
-        return new RouteGuidanceSavePacket(buf.readUtf());
+        return new RouteGuidanceSavePacket(buf.readUtf(256));
     }
 
     @Override
     public void write(FriendlyByteBuf buf) {
-        buf.writeUtf(destinationName);
+        buf.writeUtf(destinationName, 256);
     }
 
     @Override

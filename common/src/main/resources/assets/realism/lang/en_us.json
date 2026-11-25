@@ -52,6 +52,7 @@
   "realism.etcs.msg.route_changed": "Route changed: %s",
   "realism.etcs.msg.dest_behind": "Destination behind",
   "realism.route_guidance.no_route": "No drivable route to \"%s\".",
+  "realism.route_guidance.throttled": "Route request throttled; try again shortly.",
 
   "realism.etcs.route_settings.title": "ROUTE GUIDANCE",
   "realism.etcs.route_settings.select_station": "SELECT STATION",
@@ -82,6 +83,7 @@
   "realism.gui.etcs.key.train_settings": "Train Settings",
   "realism.gui.etcs.key.scroll_up": "Older Message",
   "realism.gui.etcs.key.scroll_down": "Newer Message",
+  "realism.gui.etcs.key.speed_unit": "Switch Speed Unit",
 
   "key.realism.etcs_screen": "Open ETCS Display",
   "key.categories.realism": "Create: Realism"

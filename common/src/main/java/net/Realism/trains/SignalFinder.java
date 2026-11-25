@@ -137,7 +137,7 @@ public class SignalFinder {
                     if (guidance != null && bond instanceof GlobalStation station
                             && station.id != null && station.id.equals(guidance.resolvedStationId)
                             && station.canApproachFrom(nodes.getSecond())) {
-                        result.endOfTrack(distance);
+                        result.endOfTrack(Math.abs(distance));
                         return true;
                     }
 
