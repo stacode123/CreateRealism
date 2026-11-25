@@ -41,6 +41,13 @@
   "realism.gui.accel.value.label": "Acceleration:",
   "realism.gui.accel.default": "Default Acceleration: %s m/s^2",
 
+  "realism.gui.etcs.label": "ETCS:",
+  "realism.gui.etcs.disabled": "Disabled",
+  "realism.gui.etcs.enabled": "Enabled",
+  "realism.gui.etcs.tooltip.header": "Select ETCS operation mode for this train.",
+  "realism.gui.etcs.tooltip.disabled": "Disabled: ETCS display and monitoring inactive.",
+  "realism.gui.etcs.tooltip.enabled": "Enabled: Full ETCS signaling and cab display active.",
+
   "realism.button.confirm": "Confirm",
 
   "realism.network.version_mismatch": "Create: Realism network versions do not match! Server expected %s, client has %s",

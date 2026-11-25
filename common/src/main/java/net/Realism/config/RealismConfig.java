@@ -3,6 +3,17 @@ package net.Realism.config;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 public class RealismConfig {
+    public enum ETCSAlignment {
+        TOP_LEFT,
+        TOP_CENTER,
+        TOP_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_CENTER,
+        BOTTOM_RIGHT,
+        CENTER_LEFT,
+        CENTER_RIGHT
+    }
+
     // Common Config
     public static class Common {
         public final  ForgeConfigSpec.BooleanValue GlobalETCSEnable;
@@ -26,8 +37,8 @@ public class RealismConfig {
                     .define("Global Banking Enable", true);
             builder.pop();
             builder.push("ETCS");
-            GlobalETCSEnable = builder.comment("Enable ETCS for all trains")
-                    .define("Global ETCS Enable", true);
+            GlobalETCSEnable = builder.comment("Enable ETCS globally for all trains (if false, per-train setting in station menu still applies)")
+                    .define("Global ETCS Enable", false);
             builder.pop();
             builder.pop();
         }
@@ -40,6 +51,9 @@ public class RealismConfig {
         public final ForgeConfigSpec.DoubleValue ETCSSize;
         public final ForgeConfigSpec.BooleanValue ETCSSounds;
         public final ForgeConfigSpec.BooleanValue ETCSMPH;
+        public final ForgeConfigSpec.EnumValue<ETCSAlignment> ETCSAlignment;
+        public final ForgeConfigSpec.IntValue ETCSXOffset;
+        public final ForgeConfigSpec.IntValue ETCSYOffset;
 
         public final ForgeConfigSpec.BooleanValue OverlayEnable;
         public final ForgeConfigSpec.BooleanValue OverlayMPH;
@@ -61,7 +75,13 @@ public class RealismConfig {
                     .defineInRange("ETCS Size", 0.25, 0.1, 2);
             ETCSMPH = builder.comment("Use Mph in ETCS").define("ETCS MPH", false);
             ETCSSounds = builder.comment("Enable ETCS sounds")
-                    .define("ETCS Sounds", true);
+                    .define("ETCS Sounds", false);
+            ETCSAlignment = builder.comment("Alignment position for the ETCS display (TOP_LEFT, TOP_CENTER, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT, CENTER_LEFT, CENTER_RIGHT)")
+                    .defineEnum("ETCS Alignment", RealismConfig.ETCSAlignment.TOP_RIGHT);
+            ETCSXOffset = builder.comment("X offset in pixels from alignment point")
+                    .defineInRange("ETCS X Offset", 0, -5000, 5000);
+            ETCSYOffset = builder.comment("Y offset in pixels from alignment point")
+                    .defineInRange("ETCS Y Offset", 0, -5000, 5000);
             builder.pop();
 
             builder.push("Banking");

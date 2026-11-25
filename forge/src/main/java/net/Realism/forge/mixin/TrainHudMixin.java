@@ -34,7 +34,9 @@ public abstract class TrainHudMixin {
                                                 int width, int height, CallbackInfo ci) {
         if(!(getCarriage().train instanceof ITrainInterface Rtrain)){
             return;}
-        if(RealismConfig.CLIENT.ETCSEnable.get() && RealismConfig.COMMON.GlobalETCSEnable.get() && Rtrain.realism$getETCS() != null) {
+        boolean isTrainEtcs = Rtrain.realism$getSettings() != null && Rtrain.realism$getSettings().etcs;
+        boolean isGlobalEtcs = RealismConfig.COMMON.GlobalETCSEnable.get();
+        if(RealismConfig.CLIENT.ETCSEnable.get() && (isTrainEtcs || isGlobalEtcs) && Rtrain.realism$getETCS() != null) {
             Rtrain.realism$getETCS().render(graphics);}
     }
 

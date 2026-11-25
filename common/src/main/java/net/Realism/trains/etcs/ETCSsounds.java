@@ -48,6 +48,10 @@ public class ETCSsounds {
     }
 
     public static void startWarningLoop() {
+        if (!RealismConfig.CLIENT.ETCSSounds.get()) {
+            isWarningLooping = false;
+            return;
+        }
         if (isWarningLooping) {
             return; // Already looping
         }
@@ -62,6 +66,10 @@ public class ETCSsounds {
 
     // Call this method every frame or tick to manage the loop
     public static void updateWarningLoop() {
+        if (!RealismConfig.CLIENT.ETCSSounds.get()) {
+            isWarningLooping = false;
+            return;
+        }
         if (isWarningLooping && System.currentTimeMillis() - lastWarningTime >= WARNING_INTERVAL) {
             playWarningSound();
             lastWarningTime = System.currentTimeMillis();

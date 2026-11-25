@@ -41,6 +41,13 @@
   "realism.gui.accel.value.label": "加速度:",
   "realism.gui.accel.default": "默认加速度为: %s m/s^2",
 
+  "realism.gui.etcs.label": "ETCS系统:",
+  "realism.gui.etcs.disabled": "关闭",
+  "realism.gui.etcs.enabled": "开启",
+  "realism.gui.etcs.tooltip.header": "列车ETCS系统设置",
+  "realism.gui.etcs.tooltip.disabled": "关闭: 不启用ETCS监控与HUD显示",
+  "realism.gui.etcs.tooltip.enabled": "开启: 启用完整ETCS信号与驾驶室监控",
+
   "realism.button.confirm": "确定",
 
   "realism.network.version_mismatch": "Create: Realism 版本不匹配！ 服务端为 %s, 当前客户端为 %s",

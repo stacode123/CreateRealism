@@ -333,7 +333,7 @@ public class TrainSettingsGui extends DLWindow {
         DLRichTextLabel CurrentAccelerationLabel = addComponent(
                 new DLRichTextLabel(195, 100, 200, 20)
         );
-        CurrentAccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.default", AllConfigs.server().trains.trainAcceleration.get().toString()).getString());
+        CurrentAccelerationLabel.text.get().set(Component.translatable("realism.gui.accel.default", String.valueOf(AllConfigs.server().trains.trainAcceleration.getF())).getString());
         CurrentAccelerationLabel.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);
 
 
@@ -356,6 +356,43 @@ public class TrainSettingsGui extends DLWindow {
             return false; // return true to stop further propagation if needed
 
        });
+
+        DLCycleButton ETCSButton = addComponent(
+                new DLCycleButton(275, 130, 80, 20){
+
+                }
+        );
+        ETCSButton.items.add(Component.translatable("realism.gui.etcs.disabled").getString());
+        ETCSButton.items.add(Component.translatable("realism.gui.etcs.enabled").getString());
+        ETCSButton.textFormat.set((ITextFormatter<DLCycleButton<String>>) (src ->
+                TextUtils.text(src.selectedItem.get().map(Object::toString).orElse(""))
+                        .withStyle(src.text.get().getStyle())
+        ));
+        ETCSButton.selectedIndex.set(cs.etcs ? 1 : 0);
+
+        DLRichTextLabel ETCSLabel = addComponent(
+                new DLRichTextLabel(
+                        computeLabel("realism.gui.etcs.label", 105, 270)[0], 135,
+                        computeLabel("realism.gui.etcs.label", 105, 270)[1], 20){
+                    @Override
+                    public void renderFrontLayer(DLGuiGraphics g,double mousex, double mousey, Rectangle bounds){
+                        super.renderFrontLayer(g,mousex,mousey,bounds);
+                        int screenW = (int)getWindowManager().getScreenWidth();
+                        if (isMouseOver(mousex,mousey)) {
+                            GuiUtils.drawTooltip(g,g.defaultFont(), (int) mousex, (int) mousey,
+                                    List.of(
+                                            TextUtils.text(Component.translatable("realism.gui.etcs.tooltip.header").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.etcs.tooltip.disabled").getString()),
+                                            TextUtils.text(Component.translatable("realism.gui.etcs.tooltip.enabled").getString())
+                                    ),
+                                    screenW
+                            );
+                        }
+                    }
+                }
+        );
+        ETCSLabel.text.get().set(Component.translatable("realism.gui.etcs.label").getString());
+
         DLButton ConfirmButton = addComponent(
                 new DLButton(180, 175, 80, 20)
         );
@@ -394,6 +431,7 @@ public class TrainSettingsGui extends DLWindow {
             }else{
                 ts.Inside = false;
             }
+            ts.etcs = ((int) ETCSButton.selectedIndex.get()) == 1;
             Rtrain.realism$setSettings(ts);
             RNetworking.sendToServer(new TrainSettingsSavePacket(ts,((Train)Rtrain).id));
             closeWindow();

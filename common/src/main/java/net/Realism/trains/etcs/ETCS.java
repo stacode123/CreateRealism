@@ -187,8 +187,58 @@ public class ETCS {
         sendKeysToServer();
 
         int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        int xPos = (int) ((screenWidth/ScaleFactor) - 536);  // 10 scaled pixels from right edge
-        int yPos = 0;
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        double scaledPanelW = 536.0 * ScaleFactor;
+        double scaledPanelH = 401.0 * ScaleFactor;
+
+        RealismConfig.ETCSAlignment alignment = RealismConfig.CLIENT.ETCSAlignment.get();
+        int xOffset = RealismConfig.CLIENT.ETCSXOffset.get();
+        int yOffset = RealismConfig.CLIENT.ETCSYOffset.get();
+
+        int screenX;
+        int screenY;
+
+        switch (alignment) {
+            case TOP_LEFT -> {
+                screenX = xOffset;
+                screenY = yOffset;
+            }
+            case TOP_CENTER -> {
+                screenX = (int) ((screenWidth - scaledPanelW) / 2) + xOffset;
+                screenY = yOffset;
+            }
+            case TOP_RIGHT -> {
+                screenX = (int) (screenWidth - scaledPanelW) + xOffset;
+                screenY = yOffset;
+            }
+            case BOTTOM_LEFT -> {
+                screenX = xOffset;
+                screenY = (int) (screenHeight - scaledPanelH) + yOffset;
+            }
+            case BOTTOM_CENTER -> {
+                screenX = (int) ((screenWidth - scaledPanelW) / 2) + xOffset;
+                screenY = (int) (screenHeight - scaledPanelH) + yOffset;
+            }
+            case BOTTOM_RIGHT -> {
+                screenX = (int) (screenWidth - scaledPanelW) + xOffset;
+                screenY = (int) (screenHeight - scaledPanelH) + yOffset;
+            }
+            case CENTER_LEFT -> {
+                screenX = xOffset;
+                screenY = (int) ((screenHeight - scaledPanelH) / 2) + yOffset;
+            }
+            case CENTER_RIGHT -> {
+                screenX = (int) (screenWidth - scaledPanelW) + xOffset;
+                screenY = (int) ((screenHeight - scaledPanelH) / 2) + yOffset;
+            }
+            default -> {
+                screenX = (int) (screenWidth - scaledPanelW) + xOffset;
+                screenY = yOffset;
+            }
+        }
+
+        int xPos = (int) Math.round(screenX / ScaleFactor);
+        int yPos = (int) Math.round(screenY / ScaleFactor);
 
         if (zoom == 0){
             zoom = 1;
@@ -241,10 +291,12 @@ public class ETCS {
         posestack.popPose();
         // Play info sound when a new route is detected
         if (pendingBeepSound) {
-            Minecraft mc = Minecraft.getInstance();
-            Level level = mc.level;
-            if (level != null) {
-                playBeepSound();
+            if (RealismConfig.CLIENT.ETCSSounds.get()) {
+                Minecraft mc = Minecraft.getInstance();
+                Level level = mc.level;
+                if (level != null) {
+                    playBeepSound();
+                }
             }
             pendingBeepSound = false;
         }
@@ -482,7 +534,11 @@ public class ETCS {
         int curveColor;
         if (currentSpeed > speedLimit) {
             curveColor = 0xFFFF0000;  // Red
-            startWarningLoop();
+            if (RealismConfig.CLIENT.ETCSSounds.get()) {
+                startWarningLoop();
+            } else {
+                stopWarningLoop();
+            }
         } else if (cachedCurveIsDropping || approachingBrakingZone) {
             curveColor = 0xFFFFFF00;  // Yellow
             stopWarningLoop();
