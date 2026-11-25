@@ -1,6 +1,8 @@
 package net.Realism.trains;
 
+import com.simibubi.create.content.contraptions.actors.trainControls.ControlsBlock;
 import com.simibubi.create.content.trains.entity.Carriage;
+import com.simibubi.create.content.trains.entity.CarriageContraption;
 import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
@@ -13,7 +15,10 @@ import com.simibubi.create.content.trains.station.GlobalStation;
 import net.Realism.RNetworking;
 import net.Realism.network.RouteGuidanceUpdatePacket;
 import net.createmod.catnip.data.Couple;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureBlockInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,15 +28,25 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Holds every player's {@link RouteGuidance}. The server map is authoritative and drives the ETCS
- * scan and the auto-steer selector; the client map backs the settings GUI for the local player.
+ * scan and the steering selector; the client map backs the settings GUI for the local player.
  */
 public final class RouteGuidanceManager {
 
     /** How often (in game ticks) the route is recomputed for the ETCS scan. */
     private static final long REFRESH_TICKS = 10;
 
+    /** Minimum |speed| (blocks/tick) for the speed sign to count as observed travel direction. */
+    private static final double DIRECTION_EPSILON = 0.0001;
+
     private static final Map<UUID, RouteGuidance> SERVER = new ConcurrentHashMap<>();
     private static final Map<UUID, RouteGuidance> CLIENT = new ConcurrentHashMap<>();
+
+    /**
+     * Client-side echo tracking: set when the player sends a request, cleared when the server
+     * echo (or a rejection) arrives. Lets the display lamp show a pending state in between.
+     */
+    private static final Map<UUID, Long> CLIENT_PENDING = new ConcurrentHashMap<>();
+    private static final long PENDING_TIMEOUT_MS = 5000;
 
     private RouteGuidanceManager() {}
 
@@ -45,15 +60,31 @@ public final class RouteGuidanceManager {
         return CLIENT.computeIfAbsent(player, k -> new RouteGuidance());
     }
 
-    public static void setClient(UUID player, String destinationName, boolean autoSteer) {
+    public static void setClient(UUID player, String destinationName) {
         RouteGuidance g = getClient(player);
         g.destinationName = destinationName == null ? "" : destinationName;
-        g.autoSteer = autoSteer;
+        // A server echo confirms the request.
+        CLIENT_PENDING.remove(player);
+    }
+
+    public static void markClientPending(UUID player) {
+        CLIENT_PENDING.put(player, System.currentTimeMillis());
+    }
+
+    public static boolean isClientPending(UUID player) {
+        Long sent = CLIENT_PENDING.get(player);
+        if (sent == null) return false;
+        if (System.currentTimeMillis() - sent > PENDING_TIMEOUT_MS) {
+            CLIENT_PENDING.remove(player);
+            return false;
+        }
+        return true;
     }
 
     public static void clearClient(UUID player) {
         RouteGuidance g = CLIENT.get(player);
         if (g != null) g.clear();
+        CLIENT_PENDING.remove(player);
     }
 
     public static void clearServer(UUID player) {
@@ -112,17 +143,73 @@ public final class RouteGuidanceManager {
         GlobalStation station = findStationByName(train, g.destinationName);
         if (station == null) return false;
 
-        // Same entry point base Create uses for schedules and the "approach station" prompt:
-        // it searches both directions and returns whichever is drivable (conductor rules apply).
-        DiscoveredPath found = train.navigation.findPathTo(station, -1);
+        updateDrivingDirection(train, g);
+
+        // Cost-aware search, exactly like a schedule's DestinationInstruction: it searches both
+        // directions, applies Create's signal/train penalties, and returns whichever is drivable
+        // (conductor rules apply). The penalties keep the route off occupied tracks -- e.g. an idle
+        // train with no schedule carries the largest penalty -- so a free alternative is preferred.
+        DiscoveredPath found = train.navigation.findPathTo(station, Double.MAX_VALUE);
         if (found == null || found.path == null) return false;
 
         g.trainId = train.id;
         g.resolvedStationId = station.id;
         g.path = new ArrayList<>(found.path);
         g.distanceToDestination = found.distance;
-        g.destinationBehindTrain = found.distance < 0;
+        // Create's search yields a signed distance: negative when the destination lies opposite the
+        // train's structural front. Translate that into "behind the driver" using the latched travel
+        // direction, so a driver at the rear controls heading forwards sees the same labels as a
+        // front driver would.
+        g.destinationBehindTrain = (found.distance < 0) == g.drivingTowardFront;
         g.valid = true;
+        return true;
+    }
+
+    /**
+     * Latches the travel direction onto the guidance. The latch exists so the flag can only ever
+     * change when the driver visibly picks a new direction: while {@code train.speed} is moving it
+     * is authoritative, while the train stands still the last latched value is kept. The very first
+     * evaluation (route just selected, train not moving yet) falls back to the controlling seat's
+     * facing, once -- mirroring how Create resolves the same ambiguity in {@code CarriageContraptionEntity}.
+     */
+    private static void updateDrivingDirection(Train train, RouteGuidance g) {
+        if (train != null) {
+            if (train.speed > DIRECTION_EPSILON) {
+                g.drivingTowardFront = true;
+                g.drivingDirectionKnown = true;
+            } else if (train.speed < -DIRECTION_EPSILON) {
+                g.drivingTowardFront = false;
+                g.drivingDirectionKnown = true;
+            }
+        }
+        if (!g.drivingDirectionKnown) {
+            g.drivingTowardFront = driverSeatFacesFront(train);
+            g.drivingDirectionKnown = true;
+        }
+    }
+
+    /**
+     * Whether the controlling driver's controls face the train's front. Mirrors Create's own
+     * handling of the controls facing in {@code CarriageContraptionEntity.control}.
+     */
+    private static boolean driverSeatFacesFront(Train train) {
+        for (Carriage carriage : train.carriages) {
+            CarriageContraptionEntity entity = carriage.anyAvailableEntity();
+            if (entity == null) continue;
+            UUID controlling = entity.getControllingPlayer().orElse(null);
+            if (controlling == null) continue;
+            if (!(entity.getContraption() instanceof CarriageContraption contraption)) continue;
+
+            BlockPos seatPos = contraption.getSeatOf(controlling);
+            if (seatPos == null) continue;
+            StructureBlockInfo info = contraption.getBlocks().get(seatPos);
+            // Create stores the controls facing relative to assembly direction; a mismatch means
+            // the driver controls the train "backwards" (rear controls of a double-ended train).
+            Direction expected = entity.getInitialOrientation().getCounterClockWise();
+            boolean inverted = info != null && info.state().hasProperty(ControlsBlock.FACING)
+                    && !info.state().getValue(ControlsBlock.FACING).equals(expected);
+            return !inverted;
+        }
         return true;
     }
 
@@ -151,7 +238,7 @@ public final class RouteGuidanceManager {
     // ------------------------------------------------------------------ steering
 
     /**
-     * Selector used by {@code Navigation.control} when auto-steer is enabled. Follows the route
+     * Selector used by {@code Navigation.control} while route guidance is active. Follows the route
      * edge at junctions and falls back to the player's manual steer otherwise.
      */
     public static TravellingPoint.ITrackSelector createSteeringSelector(Train train, RouteGuidance g,
@@ -194,12 +281,12 @@ public final class RouteGuidanceManager {
     /**
      * Applies a client request. Runs on the server, validated against the sender's controlling train.
      */
-    public static void apply(ServerPlayer player, String destinationName, boolean autoSteer) {
+    public static void apply(ServerPlayer player, String destinationName) {
         UUID id = player.getUUID();
 
         if (destinationName == null || destinationName.isBlank()) {
             getServer(id).clear();
-            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket("", false, true), player);
+            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket("", true), player);
             return;
         }
 
@@ -207,15 +294,14 @@ public final class RouteGuidanceManager {
         RouteGuidance g = getServer(id);
         g.clear();
         g.destinationName = destinationName;
-        g.autoSteer = autoSteer;
 
         if (train != null && recomputePath(train, g)) {
-            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(g.destinationName, g.autoSteer, true), player);
+            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(g.destinationName, true), player);
             return;
         }
 
         // Failed: keep the map clean and tell the player.
         g.clear();
-        RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(destinationName, autoSteer, false), player);
+        RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(destinationName, false), player);
     }
 }

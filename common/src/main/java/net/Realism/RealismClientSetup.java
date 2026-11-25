@@ -7,20 +7,22 @@ import dev.architectury.event.events.client.ClientPlayerEvent;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import net.Realism.Interfaces.ITrainInterface;
-import net.Realism.gui.RouteGuidanceGui;
+import net.Realism.gui.ETCSGui;
 import net.Realism.trains.RouteGuidanceManager;
+import net.Realism.trains.etcs.ETCSMessages;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Client-only setup: registers the route-guidance key mapping and opens the GUI when pressed while
- * the local player is at a train's controls (i.e. while the ETCS display is active).
+ * Client-only setup: registers the ETCS display key mapping and opens the focused cab screen
+ * when pressed while the local player is at a train's controls (i.e. while the ETCS onboard is
+ * running). The focused screen shows the same DMI as the HUD overlay, enlarged and interactive.
  */
 public final class RealismClientSetup {
 
-    public static final KeyMapping OPEN_ROUTE_GUIDANCE = new KeyMapping(
-            "key.realism.route_guidance", GLFW.GLFW_KEY_UNKNOWN, "key.categories.realism");
+    public static final KeyMapping OPEN_ETCS_SCREEN = new KeyMapping(
+            "key.realism.etcs_screen", GLFW.GLFW_KEY_UNKNOWN, "key.categories.realism");
 
     private static boolean registered = false;
 
@@ -30,23 +32,17 @@ public final class RealismClientSetup {
         if (registered) return;
         registered = true;
 
-        KeyMappingRegistry.register(OPEN_ROUTE_GUIDANCE);
+        KeyMappingRegistry.register(OPEN_ETCS_SCREEN);
         ClientTickEvent.CLIENT_POST.register(RealismClientSetup::onClientTick);
         ClientPlayerEvent.CLIENT_PLAYER_QUIT.register(player -> {
             if (player != null) RouteGuidanceManager.clearClient(player.getUUID());
+            ETCSGui.forceClose();
+            ETCSMessages.endDrive();
         });
     }
 
-    /** Clears the local player's guidance and tells the server, e.g. when leaving the controls. */
-    public static void clearGuidance() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        RouteGuidanceManager.clearClient(mc.player.getUUID());
-        RNetworking.sendToServer(new net.Realism.network.RouteGuidanceSavePacket("", false));
-    }
-
     private static void onClientTick(Minecraft mc) {
-        while (OPEN_ROUTE_GUIDANCE.consumeClick()) {
+        while (OPEN_ETCS_SCREEN.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
             if (!(mc.player.getVehicle() instanceof CarriageContraptionEntity cce)) continue;
 
@@ -56,7 +52,7 @@ public final class RealismClientSetup {
             // Only while actively at the controls, matching when the ETCS display is shown.
             if (rtrain.realism$getETCS() == null || !rtrain.realism$getETCS().toUpdate) continue;
 
-            DLWindow.openWindow(manager -> new RouteGuidanceGui(manager, rtrain));
+            DLWindow.openWindow(manager -> new ETCSGui(manager, rtrain));
         }
     }
 }

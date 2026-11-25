@@ -10,8 +10,8 @@ import java.util.UUID;
 /**
  * Per-player manual route guidance ("drive to this station").
  * <p>
- * Sessions only: nothing here is persisted to disk. The destination and the auto-steer flag are
- * owned by the player and cleared when they leave the train controls or disconnect.
+ * Sessions only: nothing here is persisted to disk. The destination is owned by the player and
+ * cleared when they leave the train controls or disconnect.
  * <p>
  * The transient fields (path, distance, ...) are only meaningful on the logical server, which is
  * where the train simulation, the ETCS scan and the steering hook run.
@@ -20,8 +20,12 @@ public class RouteGuidance {
 
     /** Player-selected station name. Empty means no destination. */
     public String destinationName = "";
-    /** Whether the mod should follow the route at junctions (player keeps manual throttle). */
-    public boolean autoSteer = false;
+
+    /* --- latched travel direction (server only) --- */
+    /** True while the driver heads towards the train's structural front. */
+    public boolean drivingTowardFront = true;
+    /** False until the direction was seen from actual movement or derived from the seat once. */
+    public boolean drivingDirectionKnown = false;
 
     // --- transient, server only ---
     public UUID trainId = null;
@@ -38,7 +42,8 @@ public class RouteGuidance {
 
     public void clear() {
         destinationName = "";
-        autoSteer = false;
+        drivingTowardFront = true;
+        drivingDirectionKnown = false;
         trainId = null;
         resolvedStationId = null;
         path = new ArrayList<>();

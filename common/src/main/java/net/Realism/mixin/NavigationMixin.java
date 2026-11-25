@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Manual route guidance steering. Only kicks in while no schedule destination is active
- * ({@code destination == null}) so Create's own autonomous navigation is never affected, and only
- * when the driver enabled auto-steer. Throttle/speed are left entirely to the player.
+ * ({@code destination == null}) so Create's own autonomous navigation is never affected.
+ * Throttle/speed are left entirely to the player.
  */
 @Mixin(value = Navigation.class, remap = false)
 public abstract class NavigationMixin {
@@ -32,7 +32,7 @@ public abstract class NavigationMixin {
         if (this.destination != null) return;
 
         RouteGuidance guidance = RouteGuidanceManager.getForTrain(this.train);
-        if (guidance == null || !guidance.autoSteer) return;
+        if (guidance == null) return;
 
         TravellingPoint.ITrackSelector fallback = mp.steer(this.train.manualSteer, new Vec3(0, 1, 0));
         cir.setReturnValue(RouteGuidanceManager.createSteeringSelector(this.train, guidance, fallback));
