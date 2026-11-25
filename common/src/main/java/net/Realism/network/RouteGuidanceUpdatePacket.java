@@ -1,6 +1,7 @@
 package net.Realism.network;
 
 import net.Realism.trains.RouteGuidanceManager;
+import net.Realism.trains.etcs.ETCSMessages;
 import net.Realism.util.S2CPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -13,23 +14,20 @@ import net.minecraft.network.chat.Component;
 public class RouteGuidanceUpdatePacket implements S2CPacket {
 
     private final String destinationName;
-    private final boolean autoSteer;
     private final boolean valid;
 
-    public RouteGuidanceUpdatePacket(String destinationName, boolean autoSteer, boolean valid) {
+    public RouteGuidanceUpdatePacket(String destinationName, boolean valid) {
         this.destinationName = destinationName == null ? "" : destinationName;
-        this.autoSteer = autoSteer;
         this.valid = valid;
     }
 
     public static RouteGuidanceUpdatePacket read(FriendlyByteBuf buf) {
-        return new RouteGuidanceUpdatePacket(buf.readUtf(), buf.readBoolean(), buf.readBoolean());
+        return new RouteGuidanceUpdatePacket(buf.readUtf(), buf.readBoolean());
     }
 
     @Override
     public void write(FriendlyByteBuf buf) {
         buf.writeUtf(destinationName);
-        buf.writeBoolean(autoSteer);
         buf.writeBoolean(valid);
     }
 
@@ -40,12 +38,12 @@ public class RouteGuidanceUpdatePacket implements S2CPacket {
 
             if (!valid) {
                 RouteGuidanceManager.clearClient(mc.player.getUUID());
-                mc.player.displayClientMessage(
-                        Component.translatable("realism.route_guidance.no_route", destinationName), true);
+                ETCSMessages.push("no_route", ETCSMessages.Severity.WARNING,
+                        Component.translatable("realism.route_guidance.no_route", destinationName).getString(), 5000);
                 return;
             }
 
-            RouteGuidanceManager.setClient(mc.player.getUUID(), destinationName, autoSteer);
+            RouteGuidanceManager.setClient(mc.player.getUUID(), destinationName);
         });
     }
 }

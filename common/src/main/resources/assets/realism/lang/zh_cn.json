@@ -45,14 +45,5 @@
 
   "realism.network.version_mismatch": "Create: Realism 版本不匹配！ 服务端为 %s, 当前客户端为 %s",
 
-  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic",
-
-  "realism.gui.route.title": "路径引导",
-  "realism.gui.route.destination": "目标车站:",
-  "realism.gui.route.auto_steer": "自动控制道岔转向",
-  "realism.gui.route.clear": "清除",
-  "realism.route_guidance.no_route": "无法到达 \"%s\"。",
-
-  "key.realism.route_guidance": "打开路径引导",
-  "key.categories.realism": "Create: Realism"
+  "realism.schedule.condition.time_of_day_realistic": "Time of Day Realistic"
 }
