@@ -13,19 +13,10 @@ import com.simibubi.create.content.trains.station.GlobalStation;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
 import net.Realism.RealismExpectPlatform;
-import net.Realism.RealismMod;
 import net.Realism.compat.TramwaysCompat;
 import net.Realism.config.RealismConfig;
-import net.Realism.network.ETCSStartStopPacket;
-import net.Realism.network.ETCSSyncPacket;
-import net.Realism.network.RouteGuidanceSavePacket;
-import net.Realism.network.SteerDirectionPacket;
-import net.Realism.network.TrainSettingsSavePacket;
-import net.Realism.trains.RouteGuidance;
-import net.Realism.trains.RouteGuidanceManager;
-import net.Realism.trains.RouteTurnFinder;
-import net.Realism.trains.SignalFinder;
-import net.Realism.trains.TrainSettings;
+import net.Realism.network.*;
+import net.Realism.trains.*;
 import net.Realism.trains.SignalFinder.SignalScanResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -36,12 +27,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static net.Realism.network.SteerDirectionPacket.KeyPressType.*;
@@ -128,9 +114,6 @@ public class ETCS {
     private static final int TS_ACCEL_MODE = 5;
     private static final int TS_ACCEL_VALUE = 6;
 
-    // TEMP-DEBUG: throttle for turn-scan logging, remove with lastDebugReason.
-    private static long lastTurnDebugLog = 0;
-
     private boolean plusKeyWasDown = false;
     private boolean minusKeyWasDown = false;
     private long lastKeyPressTime = 0;
@@ -186,16 +169,6 @@ public class ETCS {
             } else {
                 cachedTurn2Dir = RouteTurnFinder.TurnDir.NONE;
                 cachedTurn2Distance = -1;
-            }
-            // TEMP-DEBUG: remove with RouteTurnFinder.lastDebugReason.
-            long now = System.currentTimeMillis();
-            if (now - lastTurnDebugLog > 5000) {
-                lastTurnDebugLog = now;
-                RealismMod.LOGGER.info(
-                        "[ETCS-TURN] path={} distToDest={} behind={} turn={}@{}m reason={} angle={}",
-                        guidance.path.size(), (int) cachedDistToDestination, cachedDestBehind,
-                        cachedTurnDir, (int) cachedTurnDistance,
-                        RouteTurnFinder.lastDebugReason, RouteTurnFinder.lastDebugAngle);
             }
         } else {
             cachedDistToDestination = -1;
@@ -739,7 +712,8 @@ public class ETCS {
             case TS_TILT_INTENSITY -> trainSettingsDraft.customTiltIntensity =
                     (float) clamp(Math.round((trainSettingsDraft.customTiltIntensity + delta * 0.1) * 10.0) / 10.0, 0, 20);
             case TS_ACCEL_VALUE -> trainSettingsDraft.customAcceleration =
-                    clamp(Math.round((trainSettingsDraft.customAcceleration + delta * 0.1) * 10.0) / 10.0, 0, 50);
+                    clamp(Math.round((trainSettingsDraft.customAcceleration + delta * 0.1) * 10.0) / 10.0, 0,
+                            TrainSettingsLimits.maxCustomAcceleration());
             default -> { }
         }
     }
@@ -1444,6 +1418,7 @@ public class ETCS {
     }
 
     private int calculateAllowedSpeed(float distance, float maxDeceleration) {
+         if (Float.isNaN(distance) || distance < 0) distance = 0;
          distanceToBrakingPoint = 999999999;
          int distanctolimit;
          int targetspeedlimit;
@@ -1573,11 +1548,13 @@ public class ETCS {
         // Trigger sound on client side if new route detected
         this.pendingBeepSound = newRouteSound;
         this.cachedDistToDestination = distToDestination;
-        if (destBehind && !this.cachedDestBehind) {
-            ETCSMessages.push("behind", ETCSMessages.Severity.ADVISORY,
-                    Component.translatable("realism.etcs.msg.dest_behind").getString(), 0);
-        } else if (!destBehind) {
-            ETCSMessages.clear("behind");
+        if (ETCSMessages.isCurrentDrive(train.id)) {
+            if (destBehind && !this.cachedDestBehind) {
+                ETCSMessages.push("behind", ETCSMessages.Severity.ADVISORY,
+                        Component.translatable("realism.etcs.msg.dest_behind").getString(), 0);
+            } else if (!destBehind) {
+                ETCSMessages.clear("behind");
+            }
         }
         this.cachedDestBehind = destBehind;
         this.cachedTurnDir = RouteTurnFinder.TurnDir.fromByte(turnDir);

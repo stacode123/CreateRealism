@@ -45,6 +45,7 @@ public final class RealismClientSetup {
         while (OPEN_ETCS_SCREEN.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
             if (!(mc.player.getVehicle() instanceof CarriageContraptionEntity cce)) continue;
+            if (!mc.player.getUUID().equals(cce.getControllingPlayer().orElse(null))) continue;
 
             Carriage carriage = cce.getCarriage();
             if (carriage == null || !(carriage.train instanceof ITrainInterface rtrain)) continue;

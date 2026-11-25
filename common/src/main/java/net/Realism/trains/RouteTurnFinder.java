@@ -197,8 +197,8 @@ public final class RouteTurnFinder {
     private static TurnDir classify(TrackEdge incoming, TrackNode from, TrackNode at, TrackEdge chosen) {
         try {
             TrackNode next = chosen.node1 == at ? chosen.node2 : chosen.node1;
-            Vec3 inVec = oriented(incoming, from, at);
-            Vec3 outVec = oriented(chosen, at, next);
+            Vec3 inVec = orientedIncoming(incoming, from, at);
+            Vec3 outVec = orientedOutgoing(chosen, at, next);
             if (inVec.lengthSqr() < 1e-6 || outVec.lengthSqr() < 1e-6) return null;
             Vec3 in = inVec.normalize();
             Vec3 out = outVec.normalize();
@@ -214,8 +214,21 @@ public final class RouteTurnFinder {
         }
     }
 
-    /** Track tangent of an edge oriented along travel from->to, with a chord fallback. */
-    private static Vec3 oriented(TrackEdge edge, TrackNode from, TrackNode to) {
+    /** Incoming tangent at the destination node, oriented along travel from->to. */
+    private static Vec3 orientedIncoming(TrackEdge edge, TrackNode from, TrackNode to) {
+        if (edge.node1 == from && edge.node2 == to) return edge.getDirection(false);
+        if (edge.node2 == from && edge.node1 == to) return edge.getDirection(true).scale(-1);
+        try {
+            Vec3 a = from.getLocation().getLocation();
+            Vec3 b = to.getLocation().getLocation();
+            return b.subtract(a);
+        } catch (Throwable ignored) {
+            return edge.getDirection(true);
+        }
+    }
+
+    /** Outgoing tangent at the source node, oriented along travel from->to. */
+    private static Vec3 orientedOutgoing(TrackEdge edge, TrackNode from, TrackNode to) {
         if (edge.node1 == from && edge.node2 == to) return edge.getDirection(true);
         if (edge.node2 == from && edge.node1 == to) return edge.getDirection(false).scale(-1);
         try {

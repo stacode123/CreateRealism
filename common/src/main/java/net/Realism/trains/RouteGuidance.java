@@ -10,8 +10,8 @@ import java.util.UUID;
 /**
  * Per-player manual route guidance ("drive to this station").
  * <p>
- * Sessions only: nothing here is persisted to disk. The destination is owned by the player and
- * cleared when they leave the train controls or disconnect.
+ * Sessions only: nothing here is persisted to disk. The destination is owned by the player,
+ * active only while they control the train, and cleared when they disconnect.
  * <p>
  * The transient fields (path, distance, ...) are only meaningful on the logical server, which is
  * where the train simulation, the ETCS scan and the steering hook run.
@@ -28,6 +28,7 @@ public class RouteGuidance {
     public boolean drivingDirectionKnown = false;
 
     // --- transient, server only ---
+    public UUID ownerId = null;
     public UUID trainId = null;
     public UUID resolvedStationId = null;
     public List<Couple<TrackNode>> path = new ArrayList<>();
@@ -40,10 +41,20 @@ public class RouteGuidance {
         return destinationName != null && !destinationName.isEmpty();
     }
 
+    /** Stops the current path from being consumed while retaining the requested destination. */
+    public void invalidate() {
+        resolvedStationId = null;
+        path = new ArrayList<>();
+        distanceToDestination = 0;
+        destinationBehindTrain = false;
+        valid = false;
+    }
+
     public void clear() {
         destinationName = "";
         drivingTowardFront = true;
         drivingDirectionKnown = false;
+        ownerId = null;
         trainId = null;
         resolvedStationId = null;
         path = new ArrayList<>();

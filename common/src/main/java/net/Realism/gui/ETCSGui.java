@@ -1,5 +1,6 @@
 package net.Realism.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import de.mrjulsen.mcdragonlib.client.gui.events.DLGuiStandardEvents;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLGuiComponent;
 import de.mrjulsen.mcdragonlib.client.gui.widgets.base.DLWindow;
@@ -12,16 +13,20 @@ import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.Rectangle;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
+import net.Realism.config.RealismConfig;
 import net.Realism.network.SteerDirectionPacket;
 import net.Realism.trains.etcs.ETCS;
 import net.Realism.trains.etcs.ETCSMessages;
 import net.Realism.trains.etcs.ETCSsounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The focused ETCS cab screen: the very same driver-machine interface that the HUD overlay
@@ -50,12 +55,16 @@ public class ETCSGui extends DLWindow {
     private static final int GLASS_EDGE = 0xFF0B0D11;
 
     private static boolean openInstance = false;
+    /** Set when ESC closed the screen; cleared once the key is physically released. */
+    private static boolean escapeClosedGui = false;
     /** Display scale of the focused screen. */
     private static final double focusedScale = 0.5;
 
     private final ITrainInterface rtrain;
     private DisplayComponent display;
     private final List<SoftKey> softKeys = new ArrayList<>();
+    /** DragonLib reports GLFW repeats as presses, so track Enter until its release event. */
+    private final Set<Integer> heldEnterKeys = new HashSet<>();
     /** Debounces the keyboard zoom keys against GLFW key-repeat. */
     private long lastZoomKeyTime = 0;
     private static final long ZOOM_KEY_COOLDOWN_MS = 250;
@@ -67,6 +76,26 @@ public class ETCSGui extends DLWindow {
     /** Safety net for paths that never dispatch a CloseEvent (disconnect, world change). */
     public static void forceClose() {
         openInstance = false;
+        escapeClosedGui = false;
+    }
+
+    /**
+     * Create stops train control whenever the raw ESC key is down. The cab screen consumes
+     * the ESC press that closes it, so that press must not also release the controls; only
+     * the next press (after ESC has been released and pressed again) does, as usual.
+     */
+    public static boolean shouldSuppressEscapeForTrainControl() {
+        if (openInstance) return true;
+        if (!escapeClosedGui) return false;
+        if (!isEscapeDown()) {
+            escapeClosedGui = false;
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isEscapeDown() {
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_ESCAPE);
     }
 
     public ETCSGui(DLWindowManager manager, ITrainInterface rtrain) {
@@ -83,6 +112,10 @@ public class ETCSGui extends DLWindow {
 
         addEventListener(DLGuiStandardEvents.CloseEvent.class, (src, e) -> {
             openInstance = false;
+            // ESC closes the screen through DragonLib; remember that this press belongs to
+            // the cab screen so Create does not treat it as "release the train controls".
+            escapeClosedGui = isEscapeDown();
+            heldEnterKeys.clear();
             ETCS etcs = etcs();
             if (etcs != null) etcs.closeRouteSettings();
             return false;
@@ -108,19 +141,11 @@ public class ETCSGui extends DLWindow {
                         etcs.routeSettingsBackspace();
                         return true;
                     }
-                    if (e.keyCode() == GLFW.GLFW_KEY_ENTER || e.keyCode() == GLFW.GLFW_KEY_KP_ENTER) {
-                        etcs.routeSettingsAccept();
-                        ETCSsounds.playBeepSound();
-                        return true;
-                    }
+                    if (acceptEnterKey(e.keyCode())) return true;
                     return false;
                 }
                 // Menu pages: ENTER confirms the highlighted entry.
-                if (e.keyCode() == GLFW.GLFW_KEY_ENTER || e.keyCode() == GLFW.GLFW_KEY_KP_ENTER) {
-                    etcs.routeSettingsAccept();
-                    ETCSsounds.playBeepSound();
-                    return true;
-                }
+                if (acceptEnterKey(e.keyCode())) return true;
                 return false;
             }
             long now = System.currentTimeMillis();
@@ -137,6 +162,10 @@ public class ETCSGui extends DLWindow {
                 }
                 return true;
             }
+            return false;
+        });
+        manager.addEventListener(DLGuiStandardEvents.KeyReleaseEvent.class, (src, e) -> {
+            heldEnterKeys.remove(e.keyCode());
             return false;
         });
 
@@ -165,6 +194,9 @@ public class ETCSGui extends DLWindow {
         addSoftKey(243, 322, 34, 31, "scroll_down", () -> scrollMessages(-1));
         // Fifth key at the bottom of the right column: accept / enter.
         addSoftKey(493, 288, 30, 41, "enter", this::menuAccept);
+        // Speedometer unit label (kph/mph): the hit zone is the whole DMI cell (x10-60,
+        // y215-244) around the small label, so hover highlights the full button box.
+        addSoftKey(10, 215, 50, 30, "speed_unit", this::toggleSpeedUnit);
     }
 
     @Override
@@ -209,12 +241,26 @@ public class ETCSGui extends DLWindow {
         ETCSsounds.playBeepSound();
     }
 
+    /** Speedometer label: switches the whole DMI between km/h and mph. */
+    private void toggleSpeedUnit() {
+        RealismConfig.CLIENT.ETCSMPH.set(!RealismConfig.CLIENT.ETCSMPH.get());
+        RealismConfig.CLIENT_SPEC.save();
+        ETCSsounds.playBeepSound();
+    }
+
     /** Right-column arrows: only meaningful while the route settings menu is open. */
     private void menuMove(int delta) {
         ETCS etcs = etcs();
         if (etcs == null || !etcs.isRouteSettingsOpen()) return;
         etcs.routeSettingsMove(delta);
         ETCSsounds.playBeepSound();
+    }
+
+    /** Accepts once per physical Enter press; GLFW repeat events only consume the key. */
+    private boolean acceptEnterKey(int keyCode) {
+        if (keyCode != GLFW.GLFW_KEY_ENTER && keyCode != GLFW.GLFW_KEY_KP_ENTER) return false;
+        if (heldEnterKeys.add(keyCode)) menuAccept();
+        return true;
     }
 
     /** Knob glyph at the bottom right: accepts the highlighted menu entry. */

@@ -1,16 +1,8 @@
 package net.Realism.trains;
 
 import com.simibubi.create.content.contraptions.actors.trainControls.ControlsBlock;
-import com.simibubi.create.content.trains.entity.Carriage;
-import com.simibubi.create.content.trains.entity.CarriageContraption;
-import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
-import com.simibubi.create.content.trains.entity.Train;
-import com.simibubi.create.content.trains.entity.TravellingPoint;
-import com.simibubi.create.content.trains.graph.DiscoveredPath;
-import com.simibubi.create.content.trains.graph.EdgePointType;
-import com.simibubi.create.content.trains.graph.TrackEdge;
-import com.simibubi.create.content.trains.graph.TrackGraph;
-import com.simibubi.create.content.trains.graph.TrackNode;
+import com.simibubi.create.content.trains.entity.*;
+import com.simibubi.create.content.trains.graph.*;
 import com.simibubi.create.content.trains.station.GlobalStation;
 import net.Realism.RNetworking;
 import net.Realism.network.RouteGuidanceUpdatePacket;
@@ -33,13 +25,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class RouteGuidanceManager {
 
     /** How often (in game ticks) the route is recomputed for the ETCS scan. */
-    private static final long REFRESH_TICKS = 10;
+    private static final long REFRESH_TICKS = 40;
+    private static final long REQUEST_COOLDOWN_MS = 1000;
 
     /** Minimum |speed| (blocks/tick) for the speed sign to count as observed travel direction. */
     private static final double DIRECTION_EPSILON = 0.0001;
 
     private static final Map<UUID, RouteGuidance> SERVER = new ConcurrentHashMap<>();
     private static final Map<UUID, RouteGuidance> CLIENT = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> LAST_PATH_REQUEST = new ConcurrentHashMap<>();
 
     /**
      * Client-side echo tracking: set when the player sends a request, cleared when the server
@@ -89,42 +83,40 @@ public final class RouteGuidanceManager {
 
     public static void clearServer(UUID player) {
         SERVER.remove(player);
+        LAST_PATH_REQUEST.remove(player);
     }
 
     // ------------------------------------------------------------------ resolution
 
-    /** The player currently at the controls of this train, if any. */
-    public static UUID controllingPlayer(Train train) {
-        if (train == null) return null;
+    private static boolean isControllingPlayer(Train train, UUID player) {
+        if (train == null || player == null) return false;
         for (Carriage carriage : train.carriages) {
             CarriageContraptionEntity entity = carriage.anyAvailableEntity();
             if (entity == null) continue;
-            var controlling = entity.getControllingPlayer();
-            if (controlling.isPresent()) return controlling.get();
+            if (player.equals(entity.getControllingPlayer().orElse(null))) return true;
         }
-        return null;
+        return false;
     }
 
     /** The train the given server player is currently controlling, if any. */
     public static Train controllingTrain(ServerPlayer player) {
-        if (player.getVehicle() instanceof CarriageContraptionEntity cce) {
-            Carriage carriage = cce.getCarriage();
-            if (carriage != null) return carriage.train;
-        }
-        return null;
+        if (!(player.getVehicle() instanceof CarriageContraptionEntity cce)) return null;
+        if (!player.getUUID().equals(cce.getControllingPlayer().orElse(null))) return null;
+        Carriage carriage = cce.getCarriage();
+        return carriage == null ? null : carriage.train;
     }
 
     /**
-     * The guidance a train should act on right now, or null if there is none.
-     * Only the controlling player's guidance is considered.
+     * The guidance a train should act on right now, or null if its owner is not at the controls.
+     * Only one route is accepted per train; a newer controller request replaces the previous one.
      */
     public static RouteGuidance getForTrain(Train train) {
-        UUID player = controllingPlayer(train);
-        if (player == null) return null;
-        RouteGuidance g = SERVER.get(player);
-        if (g == null || !g.hasDestination()) return null;
-        if (g.trainId != null && !g.trainId.equals(train.id)) return null;
-        return g;
+        if (train == null) return null;
+        for (RouteGuidance g : SERVER.values()) {
+            if (!g.hasDestination() || !train.id.equals(g.trainId)) continue;
+            if (isControllingPlayer(train, g.ownerId)) return g;
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ path computation
@@ -135,25 +127,26 @@ public final class RouteGuidanceManager {
      */
     public static boolean recomputePath(Train train, RouteGuidance g) {
         if (g == null) return false;
-        g.valid = false;
+        boolean wasValid = g.valid;
+        g.invalidate();
         // Stamp even a failed attempt so an unreachable destination is not searched every tick.
         if (train != null) g.lastPathTick = gameTime(train);
-        if (train == null || train.graph == null || !g.hasDestination()) return false;
+        if (!g.hasDestination()) return false;
+        if (train == null || train.graph == null) return failRoute(train, g, wasValid);
 
-        GlobalStation station = findStationByName(train, g.destinationName);
-        if (station == null) return false;
+        ArrayList<GlobalStation> stations = findStationsByName(train, g.destinationName);
+        if (stations.isEmpty()) return failRoute(train, g, wasValid);
 
         updateDrivingDirection(train, g);
 
-        // Cost-aware search, exactly like a schedule's DestinationInstruction: it searches both
-        // directions, applies Create's signal/train penalties, and returns whichever is drivable
-        // (conductor rules apply). The penalties keep the route off occupied tracks -- e.g. an idle
-        // train with no schedule carries the largest penalty -- so a free alternative is preferred.
-        DiscoveredPath found = train.navigation.findPathTo(station, Double.MAX_VALUE);
-        if (found == null || found.path == null) return false;
+        // Match Create's DestinationInstruction: navigation chooses the best reachable station
+        // when several stations share the requested name.
+        DiscoveredPath found = train.navigation.findPathTo(stations, Double.MAX_VALUE);
+        if (found == null || found.path == null || found.destination == null)
+            return failRoute(train, g, wasValid);
 
         g.trainId = train.id;
-        g.resolvedStationId = station.id;
+        g.resolvedStationId = found.destination.id;
         g.path = new ArrayList<>(found.path);
         g.distanceToDestination = found.distance;
         // Create's search yields a signed distance: negative when the destination lies opposite the
@@ -163,6 +156,14 @@ public final class RouteGuidanceManager {
         g.destinationBehindTrain = (found.distance < 0) == g.drivingTowardFront;
         g.valid = true;
         return true;
+    }
+
+    private static boolean failRoute(Train train, RouteGuidance g, boolean notifyOwner) {
+        if (!notifyOwner) return false;
+        String destinationName = g.destinationName;
+        sendToOwner(train, g.ownerId, new RouteGuidanceUpdatePacket(destinationName, false));
+        g.clear();
+        return false;
     }
 
     /**
@@ -183,21 +184,21 @@ public final class RouteGuidanceManager {
             }
         }
         if (!g.drivingDirectionKnown) {
-            g.drivingTowardFront = driverSeatFacesFront(train);
+            g.drivingTowardFront = driverSeatFacesFront(train, g.ownerId);
             g.drivingDirectionKnown = true;
         }
     }
 
     /**
-     * Whether the controlling driver's controls face the train's front. Mirrors Create's own
+     * Whether the route owner's controls face the train's front. Mirrors Create's own
      * handling of the controls facing in {@code CarriageContraptionEntity.control}.
      */
-    private static boolean driverSeatFacesFront(Train train) {
+    private static boolean driverSeatFacesFront(Train train, UUID ownerId) {
         for (Carriage carriage : train.carriages) {
             CarriageContraptionEntity entity = carriage.anyAvailableEntity();
             if (entity == null) continue;
             UUID controlling = entity.getControllingPlayer().orElse(null);
-            if (controlling == null) continue;
+            if (controlling == null || !controlling.equals(ownerId)) continue;
             if (!(entity.getContraption() instanceof CarriageContraption contraption)) continue;
 
             BlockPos seatPos = contraption.getSeatOf(controlling);
@@ -217,22 +218,35 @@ public final class RouteGuidanceManager {
     public static boolean ensurePath(Train train, RouteGuidance g) {
         if (g == null || !g.hasDestination()) return false;
         long now = gameTime(train);
-        if (g.lastPathTick >= 0 && now - g.lastPathTick < REFRESH_TICKS) return g.valid;
+        long refreshTicks = REFRESH_TICKS + Math.floorMod(g.ownerId == null ? 0 : g.ownerId.hashCode(), REFRESH_TICKS);
+        if (g.lastPathTick >= 0 && now - g.lastPathTick < refreshTicks) return g.valid;
         return recomputePath(train, g);
     }
 
-    private static GlobalStation findStationByName(Train train, String name) {
-        if (train.graph == null || name == null) return null;
+    private static ArrayList<GlobalStation> findStationsByName(Train train, String name) {
+        ArrayList<GlobalStation> stations = new ArrayList<>();
+        if (train.graph == null || name == null) return stations;
         for (GlobalStation station : train.graph.getPoints(EdgePointType.STATION)) {
-            if (station.name != null && station.name.equals(name)) return station;
+            if (station.name != null && station.name.equals(name)) stations.add(station);
         }
-        return null;
+        return stations;
     }
 
     private static long gameTime(Train train) {
         CarriageContraptionEntity entity = train.carriages.isEmpty() ? null : train.carriages.get(0).anyAvailableEntity();
         if (entity != null && entity.level() != null) return entity.level().getGameTime();
         return System.currentTimeMillis() / 50L;
+    }
+
+    private static void sendToOwner(Train train, UUID ownerId, RouteGuidanceUpdatePacket packet) {
+        if (train == null || ownerId == null) return;
+        for (Carriage carriage : train.carriages) {
+            CarriageContraptionEntity entity = carriage.anyAvailableEntity();
+            if (entity == null || entity.level() == null || entity.level().getServer() == null) continue;
+            ServerPlayer player = entity.level().getServer().getPlayerList().getPlayer(ownerId);
+            if (player != null) RNetworking.sendToPlayer(packet, player);
+            return;
+        }
     }
 
     // ------------------------------------------------------------------ steering
@@ -245,6 +259,7 @@ public final class RouteGuidanceManager {
                                                                        TravellingPoint.ITrackSelector fallback) {
         return (graph, pair) -> {
             List<Map.Entry<TrackNode, TrackEdge>> valid = pair.getSecond();
+            if (!g.valid) return fallback.apply(graph, pair);
 
             Map.Entry<TrackNode, TrackEdge> match = matchHead(graph, g.path, valid);
             if (match != null) {
@@ -283,8 +298,9 @@ public final class RouteGuidanceManager {
      */
     public static void apply(ServerPlayer player, String destinationName) {
         UUID id = player.getUUID();
+        String requestedName = destinationName == null ? "" : destinationName.trim();
 
-        if (destinationName == null || destinationName.isBlank()) {
+        if (requestedName.isEmpty()) {
             getServer(id).clear();
             RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket("", true), player);
             return;
@@ -292,16 +308,43 @@ public final class RouteGuidanceManager {
 
         Train train = controllingTrain(player);
         RouteGuidance g = getServer(id);
-        g.clear();
-        g.destinationName = destinationName;
-
-        if (train != null && recomputePath(train, g)) {
-            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(g.destinationName, true), player);
+        if (train == null) {
+            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(requestedName, false), player);
+            if (g.hasDestination()) {
+                RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(g.destinationName, true), player);
+            }
             return;
         }
 
-        // Failed: keep the map clean and tell the player.
-        g.clear();
-        RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(destinationName, false), player);
+        long now = System.currentTimeMillis();
+        Long lastRequest = LAST_PATH_REQUEST.get(id);
+        if (lastRequest != null && now - lastRequest < REQUEST_COOLDOWN_MS) {
+            RNetworking.sendToPlayer(RouteGuidanceUpdatePacket.throttled(g.destinationName), player);
+            return;
+        }
+        LAST_PATH_REQUEST.put(id, now);
+
+        RouteGuidance candidate = new RouteGuidance();
+        candidate.ownerId = id;
+        candidate.trainId = train.id;
+        candidate.destinationName = requestedName;
+
+        if (recomputePath(train, candidate)) {
+            // A train has one active guidance owner. Publish the new route only after pathfinding
+            // succeeds, so a failed request cannot destroy the previously accepted route.
+            for (RouteGuidance other : SERVER.values()) {
+                if (other == g || other == candidate || !train.id.equals(other.trainId)) continue;
+                sendToOwner(train, other.ownerId, new RouteGuidanceUpdatePacket("", true));
+                other.clear();
+            }
+            SERVER.put(id, candidate);
+            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(candidate.destinationName, true), player);
+            return;
+        }
+
+        RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(requestedName, false), player);
+        if (g.hasDestination()) {
+            RNetworking.sendToPlayer(new RouteGuidanceUpdatePacket(g.destinationName, true), player);
+        }
     }
 }

@@ -2,11 +2,7 @@ package net.Realism.trains.etcs;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * ETCS-wide onboard message queue (client side only).
@@ -74,6 +70,10 @@ public final class ETCSMessages {
         clearAll();
     }
 
+    public static boolean isCurrentDrive(UUID id) {
+        return Objects.equals(driveId, id);
+    }
+
     private static void clearAll() {
         QUEUE.clear();
         ARCHIVE.clear();
@@ -130,10 +130,14 @@ public final class ETCSMessages {
         if (scrollOffset == 0) return QUEUE.peekLast();
 
         Entry live = QUEUE.peekLast();
-        int liveIndex = live == null ? -1 : indexOf(live);
-        int anchor = liveIndex >= 0 ? liveIndex - 1 : ARCHIVE.size() - 1;
-        int index = Math.max(0, anchor - (scrollOffset - 1));
-        return entryAt(index);
+        int archivedOffset = 0;
+        Iterator<Entry> it = ARCHIVE.descendingIterator();
+        while (it.hasNext()) {
+            Entry entry = it.next();
+            if (entry == live) continue;
+            if (++archivedOffset == scrollOffset) return entry;
+        }
+        return null;
     }
 
     /** 1-based position of the shown entry from the newest archived message. */
@@ -141,9 +145,9 @@ public final class ETCSMessages {
         prune();
         if (ARCHIVE.isEmpty()) return 0;
         Entry shown = current();
-        int index = shown == null ? ARCHIVE.size() - 1 : indexOf(shown);
-        if (index < 0) index = ARCHIVE.size() - 1;
-        return ARCHIVE.size() - index;
+        if (shown == null) return 0;
+        int index = indexOf(shown);
+        return index < 0 ? 0 : ARCHIVE.size() - index;
     }
 
     /** Number of messages stored for this drive (live and expired). */
@@ -157,13 +161,11 @@ public final class ETCSMessages {
         return QUEUE.size();
     }
 
-    /** Furthest valid scroll offset: one page per archived entry before the live message. */
+    /** Furthest valid scroll offset: every archive entry except the current live one. */
     private static int maxScrollOffset() {
         if (ARCHIVE.isEmpty()) return 0;
         Entry live = QUEUE.peekLast();
-        int liveIndex = live == null ? -1 : indexOf(live);
-        int anchor = liveIndex >= 0 ? liveIndex - 1 : ARCHIVE.size() - 1;
-        return Math.max(0, anchor + 1);
+        return ARCHIVE.size() - (live != null && indexOf(live) >= 0 ? 1 : 0);
     }
 
     private static void clampScroll() {
@@ -177,14 +179,6 @@ public final class ETCSMessages {
             i++;
         }
         return -1;
-    }
-
-    private static Entry entryAt(int index) {
-        int i = 0;
-        for (Entry e : ARCHIVE) {
-            if (i++ == index) return e;
-        }
-        return null;
     }
 
     // ------------------------------------------------------------------ expiry
