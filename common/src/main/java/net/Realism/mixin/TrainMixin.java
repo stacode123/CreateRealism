@@ -11,6 +11,7 @@ import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.TrainSettingsUpdatePacket;
+import net.Realism.trains.RouteGuidanceManager;
 import net.Realism.trains.TrainSettings;
 import net.Realism.trains.etcs.ETCS;
 import net.minecraft.nbt.CompoundTag;
@@ -67,6 +68,16 @@ public abstract class TrainMixin implements ITrainInterface {
         if(this.realism$etcs.toUpdate){
         this.realism$etcs.update();
         }
+    }
+
+    /**
+     * Route guidance claims signal blocks before any train's Navigation scan runs this tick.
+     * GlobalRailwayManager clears all reservations before earlyTick, so re-asserting them here
+     * (rather than in tick) makes them visible to every train regardless of iteration order.
+     */
+    @Inject(method = "earlyTick", at = @At("HEAD"))
+    private void realism$guidanceSignalReservation(CallbackInfo ci) {
+        RouteGuidanceManager.tickSignalReservation((Train) (Object) this);
     }
     @Inject(method = "write", at = @At(value = "RETURN"), cancellable = true)
     private void write(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
