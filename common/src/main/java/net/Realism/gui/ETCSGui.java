@@ -420,7 +420,9 @@ public class ETCSGui extends DLWindow {
             // The screen dies with its power source: switching ETCS off or losing the train
             // takes the display down instead of leaving a frozen image.
             ETCS etcs = rtrain != null ? rtrain.realism$getETCS() : null;
-            if (etcs == null || !etcs.toUpdate) {
+            if (etcs == null || !etcs.toUpdate
+                    || !RealismConfig.CLIENT.ETCSEnable.get()
+                    || !RealismConfig.COMMON.GlobalETCSEnable.get()) {
                 closeFocused();
             }
         }
