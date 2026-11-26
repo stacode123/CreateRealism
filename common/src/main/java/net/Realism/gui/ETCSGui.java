@@ -13,6 +13,7 @@ import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.Rectangle;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
+import net.Realism.RealismExpectPlatform;
 import net.Realism.config.RealismConfig;
 import net.Realism.network.SteerDirectionPacket;
 import net.Realism.trains.etcs.ETCS;
@@ -244,7 +245,7 @@ public class ETCSGui extends DLWindow {
     /** Speedometer label: switches the whole DMI between km/h and mph. */
     private void toggleSpeedUnit() {
         RealismConfig.CLIENT.ETCSMPH.set(!RealismConfig.CLIENT.ETCSMPH.get());
-        RealismConfig.CLIENT_SPEC.save();
+        RealismExpectPlatform.saveClientConfig();
         ETCSsounds.playBeepSound();
     }
 

@@ -18,4 +18,9 @@ public class RealismExpectPlatform {
     public static boolean isModLoaded(String id) {
         throw new AssertionError();
     }
+
+    @ExpectPlatform
+    public static void saveClientConfig() {
+        throw new AssertionError();
+    }
 }

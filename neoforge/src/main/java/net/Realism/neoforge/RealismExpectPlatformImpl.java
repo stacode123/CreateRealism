@@ -14,4 +14,8 @@ public class RealismExpectPlatformImpl {
     public static boolean isModLoaded(String id){
         return ModList.get().isLoaded(id);
     }
+
+    public static void saveClientConfig(){
+        net.Realism.config.RealismConfig.CLIENT_SPEC.save();
+    }
 }
