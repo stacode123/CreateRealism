@@ -33,6 +33,19 @@ public class TrainSettings {
         return Inside;
     }
 
+    /** Independent copy, used by the DMI settings page so an edit can be cancelled. */
+    public TrainSettings copy() {
+        TrainSettings copy = new TrainSettings();
+        copy.ts = ts;
+        copy.as = as;
+        copy.customAcceleration = customAcceleration;
+        copy.customMaxTilt = customMaxTilt;
+        copy.customMinSpeed = customMinSpeed;
+        copy.customTiltIntensity = customTiltIntensity;
+        copy.Inside = Inside;
+        return copy;
+    }
+
     public boolean isTiltDisabled() {
         return  ts== tiltSetting.DISABLED;};
 

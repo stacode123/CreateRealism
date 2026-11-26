@@ -28,11 +28,19 @@ public class ETCSSyncPacket implements S2CPacket {
     private final boolean newRoute;
     private final double distanceToBrakingPoint;
     private final boolean toUpdate;
+    private final double distToDestination;
+    private final boolean destBehind;
+    private final byte turnDir;
+    private final double turnDistance;
+    private final byte turn2Dir;
+    private final double turn2Distance;
 
     public ETCSSyncPacket(UUID trainId, double distanceToSignal, double speedLimit, float needleRotation,
                          boolean backward, double emergencyBrakingDist, double serviceBrakingDist,
                          double warningBrakingDist, boolean cachedCurveIsDropping, List<SpeedLimit> speedLimits,
-                         int zoom, boolean newRoute, double distanceToBrakingPoint, boolean toUpdate) {
+                         int zoom, boolean newRoute, double distanceToBrakingPoint, boolean toUpdate,
+                         double distToDestination, boolean destBehind, byte turnDir, double turnDistance,
+                         byte turn2Dir, double turn2Distance) {
         this.trainId = trainId;
         this.distanceToSignal = distanceToSignal;
         this.speedLimit = speedLimit;
@@ -47,6 +55,12 @@ public class ETCSSyncPacket implements S2CPacket {
         this.newRoute = newRoute;
         this.distanceToBrakingPoint = distanceToBrakingPoint;
         this.toUpdate = toUpdate;
+        this.distToDestination = distToDestination;
+        this.destBehind = destBehind;
+        this.turnDir = turnDir;
+        this.turnDistance = turnDistance;
+        this.turn2Dir = turn2Dir;
+        this.turn2Distance = turn2Distance;
     }
 
     public static ETCSSyncPacket read(FriendlyByteBuf buffer) {
@@ -71,10 +85,17 @@ public class ETCSSyncPacket implements S2CPacket {
             double limit = buffer.readDouble();
             speedLimits.add(new SpeedLimit(distance, limit));
         }
+        double distToDestination = buffer.readDouble();
+        boolean destBehind = buffer.readBoolean();
+        byte turnDir = buffer.readByte();
+        double turnDistance = buffer.readDouble();
+        byte turn2Dir = buffer.readByte();
+        double turn2Distance = buffer.readDouble();
 
         return new ETCSSyncPacket(trainId, distanceToSignal, speedLimit, needleRotation, backward,
                 emergencyBrakingDist, serviceBrakingDist, warningBrakingDist, cachedCurveIsDropping,
-                speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate);
+                speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate,
+                distToDestination, destBehind, turnDir, turnDistance, turn2Dir, turn2Distance);
     }
 
 
@@ -101,6 +122,13 @@ public class ETCSSyncPacket implements S2CPacket {
             buffer.writeDouble(limit.distance());
             buffer.writeDouble(limit.speedLimit());
         }
+        // Write route guidance display state
+        buffer.writeDouble(distToDestination);
+        buffer.writeBoolean(destBehind);
+        buffer.writeByte(turnDir);
+        buffer.writeDouble(turnDistance);
+        buffer.writeByte(turn2Dir);
+        buffer.writeDouble(turn2Distance);
     }
 
     @Override
@@ -117,7 +145,8 @@ public class ETCSSyncPacket implements S2CPacket {
                     trainInterface.realism$getETCS().updateFromNetwork(
                             distanceToSignal, speedLimit, needleRotation, backward,
                             emergencyBrakingDist, serviceBrakingDist, warningBrakingDist,
-                            cachedCurveIsDropping, speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate
+                            cachedCurveIsDropping, speedLimits, zoom, newRoute, distanceToBrakingPoint, toUpdate,
+                            distToDestination, destBehind, turnDir, turnDistance, turn2Dir, turn2Distance
                     );
                 }
             } catch (Exception e) {

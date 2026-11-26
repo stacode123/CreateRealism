@@ -21,6 +21,8 @@ public class CarriageContraptionEntityMixin {
     @Inject(method = "startControlling", at = @At("RETURN"), cancellable = true)
     private void afterStartControlling(BlockPos controlsLocalPos, Player player, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValue()) {
+            // Guidance is kept for the whole ride: briefly releasing the controls (ESC, opening a
+            // screen, right-click toggle) must not force the driver to re-enter the destination.
             if (carriage.train instanceof ITrainInterface RTrain) {
                 if (RTrain.realism$getETCS() == null) {
                     RTrain.realism$setETCS(new ETCS(carriage.train));

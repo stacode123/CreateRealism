@@ -3,11 +3,13 @@ package net.Realism.trains;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TravellingPoint;
+import com.simibubi.create.content.trains.graph.TrackEdge;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import com.simibubi.create.content.trains.signal.SignalBlock.SignalType;
 import com.simibubi.create.content.trains.signal.SignalBoundary;
 import com.simibubi.create.content.trains.signal.SignalEdgeGroup;
 import com.simibubi.create.content.trains.signal.TrackEdgePoint;
+import com.simibubi.create.content.trains.station.GlobalStation;
 import net.Realism.compat.TramwaysCompat;
 import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.data.Pair;
@@ -41,6 +43,15 @@ public class SignalFinder {
      * @return Information about upcoming signals
      */
     public static SignalScanResult scanAheadForSignals(Train train, double maxDistance, boolean isMovingBackward) {
+        return scanAheadForSignals(train, maxDistance, isMovingBackward, null);
+    }
+
+    /**
+     * Scans ahead along the player's route when a {@link RouteGuidance} is supplied, stopping at the
+     * selected destination station. Without guidance this behaves like the straight-path scan.
+     */
+    public static SignalScanResult scanAheadForSignals(Train train, double maxDistance, boolean isMovingBackward,
+                                                       RouteGuidance guidance) {
         SignalScanResult result = new SignalScanResult();
 
         if (train.graph == null)
@@ -84,10 +95,31 @@ public class SignalFinder {
         if (train.manualSteer != null) {
             steerDirection = train.manualSteer;
         }
+        final TravellingPoint.ITrackSelector fallbackSelector = scout.steer(steerDirection, new Vec3(0, 1, 0));
+
+        // Follow the player's route to the destination when one is set, otherwise go straight.
+        TravellingPoint.ITrackSelector trackSelector = fallbackSelector;
+        if (guidance != null && !guidance.path.isEmpty()) {
+            final List<Couple<TrackNode>> pathCopy = new ArrayList<>(guidance.path);
+            trackSelector = (graph, pair) -> {
+                if (!pathCopy.isEmpty()) {
+                    TrackEdge target = graph.getConnection(pathCopy.get(0));
+                    if (target != null) {
+                        for (Map.Entry<TrackNode, TrackEdge> option : pair.getSecond()) {
+                            if (option.getValue() == target) {
+                                pathCopy.remove(0);
+                                return option;
+                            }
+                        }
+                    }
+                }
+                return fallbackSelector.apply(graph, pair);
+            };
+        }
 
         // Travel along the track
          double distanceTraveled = scout.travel(train.graph, maxDistance,
-                scout.steer(steerDirection, new Vec3(0, 1, 0)), // Always go straight
+                trackSelector,
                 (distance, couple) -> {
                     // Process signal points
                     Couple<TrackNode> nodes = couple.getSecond();
@@ -99,6 +131,14 @@ public class SignalFinder {
                         // Pass this information when adding the tram sign
                         result.addTramSign(bond, distance, primary);
                         return false; // Continue scanning, don't stop at tram signs
+                    }
+
+                    // Stop the scan at the player's chosen destination station (hard stop target).
+                    if (guidance != null && bond instanceof GlobalStation station
+                            && station.id != null && station.id.equals(guidance.resolvedStationId)
+                            && station.canApproachFrom(nodes.getSecond())) {
+                        result.endOfTrack(Math.abs(distance));
+                        return true;
                     }
 
                     // Handle SignalBoundary

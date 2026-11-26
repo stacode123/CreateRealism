@@ -18,11 +18,12 @@ import de.mrjulsen.mcdragonlib.util.TextUtils;
 import de.mrjulsen.mcdragonlib.util.math.Rectangle;
 import net.Realism.Interfaces.ITrainInterface;
 import net.Realism.RNetworking;
-import net.Realism.config.RealismConfig;
 import net.Realism.network.TrainSettingsSavePacket;
 import net.Realism.trains.TrainSettings;
+import net.Realism.trains.TrainSettingsLimits;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -45,8 +46,15 @@ public class TrainSettingsGui extends DLWindow {
         return new int[]{controlX - textW, textW+10};
     }
 
+    private final BlockPos stationPos;
+
     public TrainSettingsGui(DLWindowManager manager, ITrainInterface Rtrain) {
+        this(manager, Rtrain, null);
+    }
+
+    public TrainSettingsGui(DLWindowManager manager, ITrainInterface Rtrain, BlockPos stationPos) {
         super(manager);
+        this.stationPos = stationPos;
 
         TrainSettings cs = Rtrain.realism$getSettings();
         // Set window size and position
@@ -309,12 +317,7 @@ public class TrainSettingsGui extends DLWindow {
                 new DLNumberPicker(275, 70, 80, 20)
         );
         AccelerationPicker.min.set((double) 0);
-        if(RealismConfig.COMMON.AllowBiggerValuesTrains.get()){
-            AccelerationPicker.max.set(50.0);
-        }
-        else {
-            AccelerationPicker.max.set((double) AllConfigs.server().trains.trainAcceleration.getF());
-        }
+        AccelerationPicker.max.set(TrainSettingsLimits.maxCustomAcceleration());
         AccelerationPicker.format.set(new INumberFormatAdapter.DecimalNumberFormat(1));
         AccelerationPicker.value.set((double) cs.customAcceleration);
         AccelerationPicker.visible.set(cs.as == TrainSettings.accelerationSetting.CUSTOM);
@@ -395,7 +398,7 @@ public class TrainSettingsGui extends DLWindow {
                 ts.Inside = false;
             }
             Rtrain.realism$setSettings(ts);
-            RNetworking.sendToServer(new TrainSettingsSavePacket(ts,((Train)Rtrain).id));
+            RNetworking.sendToServer(new TrainSettingsSavePacket(ts, ((Train) Rtrain).id, stationPos));
             closeWindow();
 
             return false;

@@ -19,3 +19,5 @@ classes/
 *.launch
 *.patch
 CLAUDE.md
+/deploy.sh
+/etcsButtons.png

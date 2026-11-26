@@ -66,6 +66,6 @@ public abstract class StationScreenMixin extends AbstractStationScreen {
     private void onSettingsPressed() {
         this.onClose();
         if(displayedTrain.get() instanceof ITrainInterface Rtrain)
-        DLWindow.openWindow((manager) -> new TrainSettingsGui(manager, Rtrain));
+        DLWindow.openWindow((manager) -> new TrainSettingsGui(manager, Rtrain, blockEntity.getBlockPos()));
     }
 }
