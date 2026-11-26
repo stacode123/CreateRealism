@@ -10,6 +10,7 @@ public class RealismConfig {
         public final ModConfigSpec.BooleanValue EnableCustomTrainAcceleration;
         public final ModConfigSpec.DoubleValue CustomTrainAccelerationMultiplyer;
         public final ModConfigSpec.BooleanValue AllowBiggerValuesTrains;
+        public final ModConfigSpec.BooleanValue GuidanceSignalReservation;
 
         Common(ModConfigSpec.Builder builder) {
             builder.push("general");
@@ -28,6 +29,10 @@ public class RealismConfig {
             builder.push("ETCS");
             GlobalETCSEnable = builder.comment("Enable ETCS for all trains")
                     .define("Global ETCS Enable", true);
+            builder.pop();
+            builder.push("Route Guidance");
+            GuidanceSignalReservation = builder.comment("Reserve signal blocks within stopping distance ahead of manually driven trains that use route guidance")
+                    .define("Signal Block Reservation", true);
             builder.pop();
             builder.pop();
         }

@@ -3,9 +3,7 @@ package net.Realism.trains;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import net.createmod.catnip.data.Couple;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Per-player manual route guidance ("drive to this station").
@@ -36,6 +34,12 @@ public class RouteGuidance {
     public boolean destinationBehindTrain = false;
     public long lastPathTick = -1;
     public boolean valid = false;
+    /**
+     * Signal groups claimed by the guidance for this tick. Rebuilt by
+     * {@link RouteGuidanceManager#tickSignalReservation} every tick; used by the ETCS scan to
+     * treat our own reservation as cleared instead of occupied.
+     */
+    public final Set<UUID> reservedGroups = new HashSet<>();
 
     public boolean hasDestination() {
         return destinationName != null && !destinationName.isEmpty();
@@ -48,6 +52,8 @@ public class RouteGuidance {
         distanceToDestination = 0;
         destinationBehindTrain = false;
         valid = false;
+        // reservedGroups is intentionally left alone: a mid-tick path recompute must not make the
+        // ETCS forget about reservations that are still active until the next reservation pass.
     }
 
     public void clear() {
@@ -62,5 +68,6 @@ public class RouteGuidance {
         destinationBehindTrain = false;
         lastPathTick = -1;
         valid = false;
+        reservedGroups.clear();
     }
 }

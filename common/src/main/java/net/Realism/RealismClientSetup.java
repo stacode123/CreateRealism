@@ -22,7 +22,7 @@ import org.lwjgl.glfw.GLFW;
 public final class RealismClientSetup {
 
     public static final KeyMapping OPEN_ETCS_SCREEN = new KeyMapping(
-            "key.realism.etcs_screen", GLFW.GLFW_KEY_UNKNOWN, "key.categories.realism");
+            "key.realism.etcs_screen", GLFW.GLFW_KEY_V, "key.categories.realism");
 
     private static boolean registered = false;
 

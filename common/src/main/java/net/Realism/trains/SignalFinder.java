@@ -101,21 +101,7 @@ public class SignalFinder {
         // Follow the player's route to the destination when one is set, otherwise go straight.
         TravellingPoint.ITrackSelector trackSelector = fallbackSelector;
         if (guidance != null && !guidance.path.isEmpty()) {
-            final List<Couple<TrackNode>> pathCopy = new ArrayList<>(guidance.path);
-            trackSelector = (graph, pair) -> {
-                if (!pathCopy.isEmpty()) {
-                    TrackEdge target = graph.getConnection(pathCopy.get(0));
-                    if (target != null) {
-                        for (Map.Entry<TrackNode, TrackEdge> option : pair.getSecond()) {
-                            if (option.getValue() == target) {
-                                pathCopy.remove(0);
-                                return option;
-                            }
-                        }
-                    }
-                }
-                return fallbackSelector.apply(graph, pair);
-            };
+            trackSelector = followPath(guidance.path, fallbackSelector);
         }
 
         // Travel along the track
@@ -159,8 +145,8 @@ public class SignalFinder {
 
                     boolean primary = entering.equals(signal.groups.getFirst());
                     boolean crossSignal = signal.types.get(primary) == SignalType.CROSS_SIGNAL;
-                    boolean occupied = signal.isForcedRed(nodes.getSecond()) ||
-                            signalEdgeGroup.isOccupiedUnless(train);
+                    boolean occupied = isOccupiedForScan(train, signalEdgeGroup,
+                            signal.isForcedRed(nodes.getSecond()), guidance);
 
                     boolean crossSignalTracked = trackingCrossSignal.getValue() != null;
 
@@ -201,6 +187,54 @@ public class SignalFinder {
         }
 
         return result;
+    }
+
+    /**
+     * Selector that follows the given route and falls back to the supplied selector once the route
+     * is exhausted (or if a route edge is not among the available options). The path list is
+     * copied, so the caller's route is left untouched.
+     */
+    public static TravellingPoint.ITrackSelector followPath(List<Couple<TrackNode>> path,
+                                                             TravellingPoint.ITrackSelector fallback) {
+        final List<Couple<TrackNode>> pathCopy = new ArrayList<>(path);
+        return (graph, pair) -> {
+            if (!pathCopy.isEmpty()) {
+                TrackEdge target = graph.getConnection(pathCopy.get(0));
+                if (target != null) {
+                    for (Map.Entry<TrackNode, TrackEdge> option : pair.getSecond()) {
+                        if (option.getValue() == target) {
+                            pathCopy.remove(0);
+                            return option;
+                        }
+                    }
+                }
+            }
+            return fallback.apply(graph, pair);
+        };
+    }
+
+    /**
+     * Occupancy test used by the ETCS scan. Matches
+     * {@link SignalEdgeGroup#isOccupiedUnless(Train)} (including intersecting signal groups) except
+     * that groups reserved by the scanning train's own route guidance count as clear - otherwise
+     * the display would brake for blocks it just reserved. Real occupants are never ignored.
+     */
+    private static boolean isOccupiedForScan(Train train, SignalEdgeGroup group, boolean forcedRed,
+                                              RouteGuidance guidance) {
+        if (forcedRed)
+            return true;
+        if (!group.isOccupiedUnless(train))
+            return false;
+        for (SignalEdgeGroup intersecting : group.intersectingResolved) {
+            boolean ownReservation = guidance != null && guidance.reservedGroups.contains(intersecting.id);
+            if (!ownReservation && intersecting.reserved != null)
+                return true;
+            for (Train other : intersecting.trains) {
+                if (other != train)
+                    return true;
+            }
+        }
+        return false;
     }
 
     public static class SignalScanResult {
