@@ -7,6 +7,7 @@ import dev.architectury.event.events.client.ClientPlayerEvent;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import net.Realism.Interfaces.ITrainInterface;
+import net.Realism.config.RealismConfig;
 import net.Realism.gui.ETCSGui;
 import net.Realism.trains.RouteGuidanceManager;
 import net.Realism.trains.etcs.ETCSMessages;
@@ -52,6 +53,8 @@ public final class RealismClientSetup {
 
             // Only while actively at the controls, matching when the ETCS display is shown.
             if (rtrain.realism$getETCS() == null || !rtrain.realism$getETCS().toUpdate) continue;
+            // Respect the same switches as the HUD: never open the cab screen when ETCS is off.
+            if (!RealismConfig.CLIENT.ETCSEnable.get() || !RealismConfig.COMMON.GlobalETCSEnable.get()) continue;
 
             DLWindow.openWindow(manager -> new ETCSGui(manager, rtrain));
         }

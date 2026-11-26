@@ -87,9 +87,17 @@ public final class RouteTurnFinder {
 
             boolean forward = !backward;
             TrackGraph graph = train.graph;
-            TrackEdge incoming = start.edge;
             TrackNode prev = forward ? start.node1 : start.node2;
             TrackNode at = forward ? start.node2 : start.node1;
+            // Always orient the incoming edge from prev to at, i.e. along the train's travel
+            // direction. For a backwards run start.edge points at->prev, so look the reverse
+            // directional edge up instead; keeping one orientation lets the forward and
+            // backward cases share the same viability test.
+            TrackEdge incoming = graph.getConnectionsFrom(prev).get(at);
+            if (incoming == null) {
+                lastDebugReason = "no-start-edge";
+                return found;
+            }
             double edgeLen = incoming.getLength();
             double dist = forward ? edgeLen - start.position : start.position;
             if (dist < 0 || Double.isNaN(dist)) dist = 0;
@@ -97,7 +105,7 @@ public final class RouteTurnFinder {
             int pathIdx = 0;
             int steps = 0;
             while (dist < MAX_SCAN && steps++ < MAX_STEPS) {
-                List<Map.Entry<TrackNode, TrackEdge>> options = viableOptions(graph, incoming, at, prev, forward);
+                List<Map.Entry<TrackNode, TrackEdge>> options = viableOptions(graph, incoming, at, prev);
                 if (options.size() > 1) {
                     // The route's leaving edge here is the first path entry that touches this
                     // junction without touching where we came from. Entries behind the train
@@ -164,7 +172,7 @@ public final class RouteTurnFinder {
 
     /** Outgoing edges at a junction, excluding the way we came, mirroring TravellingPoint.travel. */
     private static List<Map.Entry<TrackNode, TrackEdge>> viableOptions(TrackGraph graph, TrackEdge incoming,
-                                                                        TrackNode at, TrackNode prev, boolean forward) {
+                                                                        TrackNode at, TrackNode prev) {
         List<Map.Entry<TrackNode, TrackEdge>> viable = new ArrayList<>();
         Map<TrackNode, TrackEdge> connections;
         try {
@@ -176,12 +184,9 @@ public final class RouteTurnFinder {
         for (Map.Entry<TrackNode, TrackEdge> entry : connections.entrySet()) {
             if (entry.getKey() == prev) continue;
             try {
-                if (forward) {
-                    if (!incoming.canTravelTo(entry.getValue())) continue;
-                } else {
-                    TrackEdge reverse = graph.getConnectionsFrom(entry.getKey()).get(at);
-                    if (reverse == null || !reverse.canTravelTo(incoming)) continue;
-                }
+                // incoming is oriented prev->at, so this compares the tangent at `at` of the
+                // edge we arrived on with the tangent at `at` of the candidate leaving edge.
+                if (!incoming.canTravelTo(entry.getValue())) continue;
             } catch (Throwable ignored) {
                 continue;
             }

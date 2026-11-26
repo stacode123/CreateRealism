@@ -248,6 +248,12 @@ public class ETCS {
         toUpdate = true;
         // A different train means a different drive: start a fresh message archive.
         ETCSMessages.beginDrive(train.id);
+        // A sync received before the drive began can already have flagged the destination
+        // behind; re-post the sticky advisory so it is visible for this drive.
+        if (cachedDestBehind) {
+            ETCSMessages.push("behind", ETCSMessages.Severity.ADVISORY,
+                    Component.translatable("realism.etcs.msg.dest_behind").getString(), 0);
+        }
         RNetworking.sendToServer(new ETCSStartStopPacket(toUpdate,train.id));
     }
 
@@ -751,6 +757,8 @@ public class ETCS {
         UUID playerId = mc.player.getUUID();
         RouteGuidance before = RouteGuidanceManager.getClient(playerId);
         boolean hadDestination = before.hasDestination();
+        // Capture before setClient: it mutates the shared RouteGuidance instance in place.
+        String previousDestination = before.destinationName;
         String destination = destinationName == null ? "" : destinationName.trim();
 
         RouteGuidanceManager.setClient(playerId, destination);
@@ -760,7 +768,7 @@ public class ETCS {
             if (!hadDestination) {
                 ETCSMessages.push("route", ETCSMessages.Severity.INFO,
                         Component.translatable("realism.etcs.msg.route_found", destination).getString(), 4000);
-            } else if (!destination.equals(before.destinationName)) {
+            } else if (!destination.equals(previousDestination)) {
                 ETCSMessages.push("route", ETCSMessages.Severity.INFO,
                         Component.translatable("realism.etcs.msg.route_changed", destination).getString(), 4000);
             }
