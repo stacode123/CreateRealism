@@ -1,26 +1,35 @@
-
 # Create Realism
 
-## A Create addon that adds a bunch of features to make Create trains more realistic.
+A Create addon that makes trains behave more realistically.
 
-**WIKI!!!!** [https://github.com/stacode123/CreateRealism/wiki](https://github.com/stacode123/CreateRealism/wiki)
+[Wiki](https://github.com/stacode123/CreateRealism/wiki) · [Download on Modrinth](https://modrinth.com/mod/create-realism) · [Issues](https://github.com/stacode123/CreateRealism/issues)
 
-#### Features:
+> ⚠️ **Always back up your world before updating this or any other mod.**
 
-#### ETCS - Signal and track clearance
+## Features
 
-The mod also adds a Overlay when manually riding thrains that show the free track in front of the train,Braking curves to show when to start slwoing down and speed limits(IF Create: Tramways is installed) ![A Overlay witha speedmometer and a track status overview](https://cdn.modrinth.com/data/cached_images/d96cc5469b7b8035e1e116b6ea81f6e2e388c829_0.webp)
+- **ETCS onboard display** — signal and speed supervision with a braking curve, track overview and onboard messages. Press `V` for the interactive cab display.
+- **Route guidance** — pick a destination station and the train follows the route through junctions; the ETCS scans ahead to the destination and can reserve signal blocks along the way.
+- **Realistic acceleration** — acceleration depends on train weight and locomotive power, with per-train Standard, Custom and None modes.
+- **Banking & tilting** — trains lean into curves, with per-train Disabled, None, Passive, Active and Custom tilt modes. The player camera tilts too on Forge/NeoForge.
+- **Track placement overlay** — see the estimated maximum curve speed and track grade while building track.
+- **Realistic timetables** — a timetable-aware "Time of Day Realistic" schedule condition that handles delays instead of missing its departure window.
 
-**Use "+" and "-" to zoom in and out the track overview**
+## Requirements
 
-#### \-Changes the acceleration of trains to be dependent on the amount of cars attached to the train.
+- Minecraft 1.20.1 (Forge or Fabric) or 1.21.1 (NeoForge)
+- Create 6.0+
+- Architectury API and DragonLib
+- Fabric API on Fabric
+- Optional: [Create: Tramways](https://modrinth.com/mod/tramways) for ETCS speed-limit signs
 
-The more cars you have, the slower the train will accelerate. The more locomotives(cars with conductors) you have, the less the acceleration will be affected.
+The client and server must run the same Create Realism version.
 
-#### \-Track speed and grade overview
+## Links
 
-While building train tracks you can now see the max speed and grade of the track you are building. This also includes the max speed as seen in train schedules, In (%). I recommend using Create Tramways to temporarily set the max speed for curves and slopes ![A picture with the speed and grade info as an example](https://cdn.modrinth.com/data/cached_images/aea50e47fd0b3f987648e47ca77a0354487a585d.png)
+- [Wiki](https://github.com/stacode123/CreateRealism/wiki)
+- [Config](https://github.com/stacode123/CreateRealism/wiki/Config)
+- [Per-train settings](https://github.com/stacode123/CreateRealism/wiki/TrainSettings)
+- [Download](https://modrinth.com/mod/create-realism)
 
-THIS DOES NOT CHANGE THE SPEED THE TRAINS RUN AT AND IS MEARLY A HELP FOR SETTING SPEED LIMITS Use [Create Tramways](https://modrinth.com/mod/tramways) to set speed limits
-
-More features coming soon!..
+Created by Stacode · MIT License
